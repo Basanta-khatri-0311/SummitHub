@@ -1,88 +1,182 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Compass, Map as MapIcon, Users, Hexagon } from 'lucide-react';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Compass, Map as MapIcon, Users, Triangle, Sun, Moon, User, Menu, X } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
+import { Home, Explore, CommunityFeed, Profile } from './pages';
+import { AuthModal } from './components/AuthModal';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+function Navigation({ onOpenAuth }) {
+  const { isDark, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Close mobile menu on route change
+  React.useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location]);
+
+  return (
+    <nav className="border-b border-neutral-200 dark:border-neutral-900 bg-white dark:bg-[#0a0a0a] sticky top-0 z-50 transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <Link to="/" className="flex items-center space-x-3 shrink-0">
+            <Triangle className="h-6 w-6 text-black dark:text-white fill-black dark:fill-white transition-colors" />
+            <span className="text-xl font-extrabold tracking-tight text-black dark:text-white transition-colors">
+              SUMMITHUB
+            </span>
+          </Link>
+          
+          {/* Desktop Links */}
+          <div className="hidden md:block">
+            <div className="flex items-center space-x-10">
+              <Link to="/" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
+                <Compass className="h-4 w-4" /> Home
+              </Link>
+              <Link to="/explore" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
+                <MapIcon className="h-4 w-4" /> Explore
+              </Link>
+              <Link to="/community" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
+                <Users className="h-4 w-4" /> Community
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={toggleTheme} 
+              className="text-neutral-400 hover:text-black dark:hover:text-white transition-colors hidden sm:block"
+            >
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+            
+            <div className="hidden md:flex items-center gap-4">
+              {user ? (
+                <>
+                  <Link to="/profile" className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white hover:text-neutral-500 transition-colors uppercase">
+                    <User className="h-4 w-4" />
+                    {user.name.split(' ')[0]}
+                  </Link>
+                  <button 
+                    onClick={logout}
+                    className="bg-neutral-100 hover:bg-neutral-200 text-black dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-white px-4 py-2 rounded-none text-sm font-semibold tracking-wide uppercase transition-colors flex items-center gap-2"
+                  >
+                     Logout
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={onOpenAuth}
+                  className="bg-black hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-200 dark:text-black px-5 py-2 rounded-none text-sm font-semibold tracking-wide uppercase transition-colors"
+                >
+                   Sign In
+                </button>
+              )}
+            </div>
+
+            {/* Mobile Hamburger Button */}
+            <div className="flex md:hidden items-center gap-3">
+              <button 
+                onClick={toggleTheme} 
+                className="text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+              >
+                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </button>
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-black dark:text-white p-2"
+              >
+                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t border-neutral-200 dark:border-neutral-900 bg-white dark:bg-[#0a0a0a]">
+          <div className="px-4 py-6 space-y-6 flex flex-col">
+            <Link to="/" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
+              <Compass className="h-5 w-5" /> Home
+            </Link>
+            <Link to="/explore" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
+              <MapIcon className="h-5 w-5" /> Explore
+            </Link>
+            <Link to="/community" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
+              <Users className="h-5 w-5" /> Community
+            </Link>
+
+            <div className="h-px w-full bg-neutral-200 dark:bg-neutral-900 my-2"></div>
+
+            {user ? (
+               <div className="flex flex-col gap-4">
+                  <Link to="/profile" className="text-base font-bold tracking-widest text-black dark:text-white uppercase transition-colors flex items-center gap-3">
+                    <User className="h-5 w-5" /> Profile - {user.name}
+                  </Link>
+                  <button 
+                    onClick={() => { logout(); setIsMobileMenuOpen(false); }}
+                    className="w-full bg-black text-white dark:bg-white dark:text-black px-5 py-4 font-bold tracking-widest uppercase transition-colors text-left pl-4"
+                  >
+                     Execute Logout
+                  </button>
+               </div>
+            ) : (
+                <button 
+                  onClick={() => { setIsMobileMenuOpen(false); onOpenAuth(); }}
+                  className="w-full bg-black text-white dark:bg-white dark:text-black px-5 py-4 font-bold tracking-widest uppercase transition-colors text-left pl-4"
+                >
+                   Authenticate
+                </button>
+            )}
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+}
+
+function AppContent() {
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  return (
+    <Router>
+      <div className="min-h-screen flex flex-col bg-white dark:bg-[#0a0a0a] text-black dark:text-white font-sans selection:bg-black/10 dark:selection:bg-white/10 transition-colors">
+        <Toaster position="top-center" toastOptions={{
+          style: {
+            background: 'var(--bg-primary)',
+            color: 'var(--text-primary)',
+            border: '1px solid currentColor',
+            borderRadius: '0px'
+          }
+        }} />
+        
+        <Navigation onOpenAuth={() => setIsAuthModalOpen(true)} />
+
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/community" element={<CommunityFeed />} />
+          <Route path="/profile" element={<Profile />} />
+        </Routes>
+
+        <AuthModal 
+          isOpen={isAuthModalOpen} 
+          onClose={() => setIsAuthModalOpen(false)} 
+        />
+      </div>
+    </Router>
+  );
+}
 
 export default function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500/30">
-        
-        {/* Navigation */}
-        <nav className="border-b border-slate-800/50 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center space-x-2">
-                <div className="p-2 bg-indigo-500/10 rounded-xl">
-                  <Hexagon className="h-6 w-6 text-indigo-400" />
-                </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
-                  SummitHub
-                </span>
-              </div>
-              
-              <div className="hidden md:block">
-                <div className="flex items-center space-x-8">
-                  <Link to="/" className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <Compass className="h-4 w-4" /> Explore
-                  </Link>
-                  <Link to="/routes" className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <MapIcon className="h-4 w-4" /> Routes
-                  </Link>
-                  <Link to="/community" className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <Users className="h-4 w-4" /> Community
-                  </Link>
-                </div>
-              </div>
-
-              <div>
-                <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-full text-sm font-medium transition-all shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-                  Sign In
-                </button>
-              </div>
-            </div>
-          </div>
-        </nav>
-
-        {/* Hero Section */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center space-y-8">
-            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight">
-              Share Your <br className="hidden md:block" />
-              <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Trekking Experiences
-              </span>
-            </h1>
-            <p className="max-w-2xl mx-auto text-lg text-slate-400">
-              Join the ultimate community for trekkers. Discover new routes, share your journey, and connect with adventurers worldwide.
-            </p>
-            <div className="flex justify-center gap-4 pt-4">
-              <button className="bg-white text-slate-900 px-8 py-3 rounded-full font-semibold hover:bg-slate-100 transition-colors shadow-lg shadow-white/10">
-                Start Exploring
-              </button>
-              <button className="bg-slate-800 text-white px-8 py-3 rounded-full font-semibold border border-slate-700 hover:bg-slate-700 transition-colors">
-                Share a Route
-              </button>
-            </div>
-          </div>
-
-          {/* Feature Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-32">
-            {[ 
-              { title: 'Discover Routes', desc: 'Find curated routes for all difficulty levels.' },
-              { title: 'Connect', desc: 'Meet fellow trekkers and plan joint expeditions.' },
-              { title: 'Track Progress', desc: 'Build your portfolio of conquered peaks.' }
-            ].map((item, i) => (
-              <div key={i} className="bg-slate-800/20 border border-slate-700/50 p-6 rounded-2xl hover:bg-slate-800/40 transition-colors cursor-pointer group">
-                <div className="h-12 w-12 bg-indigo-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Compass className="h-6 w-6 text-indigo-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
-                <p className="text-slate-400 text-sm">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
-    </Router>
+    <AuthProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

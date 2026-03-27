@@ -1,17 +1,24 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #0f172a; /* Slate 900 for dark mode */
-
   font-synthesize: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --bg-primary: #ffffff;
+  --text-primary: #111111; /* Very dark grayish black */
+}
+
+html.dark {
+  --bg-primary: #0a0a0a; /* Almost pure black */
+  --text-primary: #f5f5f5; /* Offwhite */
 }
 
 body {
@@ -19,8 +26,19 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  /* A smooth transition for purely black/white looks great */
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
   width: 100%;
+}
+
+.map-tiles {
+  transition: filter 0.2s ease;
+}
+html.dark .map-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(85%) contrast(110%);
 }
