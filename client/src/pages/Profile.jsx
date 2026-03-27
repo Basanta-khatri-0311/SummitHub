@@ -1,12 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Target, Compass, Image as ImageIcon, Settings, Heart, Award, Map as MapIcon, ChevronRight, Camera } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { MapPin, Target, Compass, Image as ImageIcon, Settings, Heart, Award, Map as MapIcon, Calendar, MessageSquare } from 'lucide-react';
+import { Navigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 export function Profile() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('posts');
+  const [myPosts, setMyPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
   
+  useEffect(() => {
+    if (user) {
+      fetchMyPosts();
+    }
+  }, [user]);
+
+  const fetchMyPosts = async () => {
+    try {
+      const res = await fetch('http://localhost:5500/api/posts/my-posts', {
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setMyPosts(data);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!user) {
     return <Navigate to="/" replace />;
   }
@@ -14,7 +38,7 @@ export function Profile() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full min-h-[calc(100vh-64px)]">
       {/* Sleek User Banner */}
-      <div className="bg-neutral-100 dark:bg-neutral-900 rounded-3xl p-8 md:p-12 mb-10 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden transition-colors">
+      <div className="bg-neutral-100 dark:bg-neutral-900 rounded-3xl p-8 md:p-12 mb-10 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden transition-colors border border-neutral-200 dark:border-neutral-800">
         
         {/* Avatar */}
         <div className="relative group">
@@ -30,79 +54,127 @@ export function Profile() {
 
         {/* Info */}
         <div className="flex-1 text-center md:text-left z-10">
-          <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-white mb-2 tracking-tight">
+          <div className="inline-block border border-black dark:border-white px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase mb-4 text-neutral-500 dark:text-neutral-400">
+            Active Explorer
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black text-black dark:text-white mb-2 tracking-tight uppercase">
             {user.name}
           </h1>
-          <p className="text-neutral-500 font-medium flex items-center justify-center md:justify-start gap-2 text-sm md:text-base">
-            <MapPin className="h-4 w-4" /> Trekker Portfolio • Member since {new Date().getFullYear()}
+          <p className="text-neutral-500 font-bold flex items-center justify-center md:justify-start gap-2 text-xs uppercase tracking-widest">
+            <MapPin className="h-3.5 w-3.5" /> Sector: North Himalayas
           </p>
-          <div className="mt-6 flex flex-wrap gap-3 justify-center md:justify-start">
-             <span className="bg-white dark:bg-black px-4 py-2 rounded-xl text-sm font-semibold shadow-sm border border-neutral-200 dark:border-neutral-800 text-black dark:text-white flex items-center gap-2">
-                <Target className="h-4 w-4" /> 12 Peaks Conquered
-             </span>
-             <span className="bg-white dark:bg-black px-4 py-2 rounded-xl text-sm font-semibold shadow-sm border border-neutral-200 dark:border-neutral-800 text-black dark:text-white flex items-center gap-2">
-                <MapIcon className="h-4 w-4" /> 450 km Logged
-             </span>
+          
+          <div className="mt-8 flex flex-wrap gap-4 justify-center md:justify-start">
+             <div className="flex flex-col">
+                <span className="text-2xl font-black text-black dark:text-white transition-colors">{myPosts.length}</span>
+                <span className="text-[10px] font-bold text-neutral-500 tracking-widest uppercase">Expeditions</span>
+             </div>
+             <div className="w-px h-8 bg-neutral-200 dark:bg-neutral-800 my-auto"></div>
+             <div className="flex flex-col">
+                <span className="text-2xl font-black text-black dark:text-white transition-colors">12</span>
+                <span className="text-[10px] font-bold text-neutral-500 tracking-widest uppercase">Achievements</span>
+             </div>
           </div>
         </div>
         
-        <button className="absolute top-6 right-6 p-2 text-neutral-400 hover:text-black dark:hover:text-white transition-colors bg-white dark:bg-black rounded-full shadow-sm border border-neutral-200 dark:border-neutral-800">
-           <Settings className="h-5 w-5" />
+        <button className="absolute top-8 right-8 p-3 text-neutral-400 hover:text-black dark:hover:text-white transition-colors bg-white dark:bg-black rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-800">
+           <Settings className="h-5 w-5 hover:rotate-90 transition-transform" />
         </button>
       </div>
 
       {/* Tabs Layout */}
-      <div className="flex gap-8 border-b border-neutral-200 dark:border-neutral-800 mb-8 transition-colors">
-        {['posts', 'saved', 'achievements'].map((tab) => (
+      <div className="flex gap-10 border-b border-neutral-200 dark:border-neutral-800 mb-10 transition-colors">
+        {['posts', 'stats', 'awards'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`pb-4 text-sm font-semibold capitalize transition-colors relative ${
+            className={`pb-4 text-xs font-bold uppercase tracking-[0.2em] transition-colors relative ${
               activeTab === tab 
                 ? 'text-black dark:text-white' 
                 : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
             }`}
           >
-            {tab === 'posts' ? 'My Journeys' : tab}
+            {tab === 'posts' ? 'Mission Logs' : tab}
             {activeTab === tab && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black dark:bg-white rounded-t-full transition-colors" />
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black dark:bg-white rounded-t-full transition-colors" />
             )}
           </button>
         ))}
       </div>
 
       {/* Content Area */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-         <div className="md:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-3xl p-12 flex flex-col items-center justify-center text-center shadow-sm transition-colors">
-               <div className="h-16 w-16 bg-neutral-100 dark:bg-neutral-900 rounded-2xl flex items-center justify-center mb-4 transition-colors">
-                  <Camera className="h-8 w-8 text-neutral-400" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+         <div className="md:col-span-2">
+            {loading ? (
+               <div className="text-center py-20 text-neutral-400 uppercase tracking-widest text-xs font-bold animate-pulse">Decrypting logs...</div>
+            ) : myPosts.length === 0 ? (
+               <div className="bg-white dark:bg-[#0a0a0a] border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl p-16 flex flex-col items-center justify-center text-center transition-colors">
+                  <div className="h-20 w-20 bg-neutral-50 dark:bg-neutral-900 rounded-2xl flex items-center justify-center mb-6 transition-colors border border-neutral-100 dark:border-neutral-800">
+                     <ImageIcon className="h-10 w-10 text-neutral-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-black dark:text-white mb-2 uppercase tracking-tight">System Empty</h3>
+                  <p className="text-neutral-500 max-w-xs mx-auto mb-8 text-sm font-medium">You haven't initialized any expedition logs. Start your first journey transmission.</p>
+                  <Link to="/community" className="bg-black dark:bg-white text-white dark:text-black px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
+                    Access Network
+                  </Link>
                </div>
-               <h3 className="text-xl font-bold text-black dark:text-white mb-2">No Journeys Logged</h3>
-               <p className="text-neutral-500 mb-6 text-sm">You haven't shared any trekking experiences yet. Start building your portfolio today.</p>
-               <button className="bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-full text-sm font-semibold hover:opacity-80 transition-opacity">
-                 Create Post
-               </button>
-            </div>
-         </div>
-         
-         <div className="space-y-6">
-            <div className="bg-neutral-100 dark:bg-neutral-900 rounded-3xl p-6 transition-colors">
-               <h3 className="font-bold text-black dark:text-white mb-4 flex items-center gap-2">
-                 <Award className="h-5 w-5" /> Highlights
-               </h3>
-               <div className="space-y-4">
-                  {[
-                    { label: 'Highest Altitude', value: '5,364m (EBC)' },
-                    { label: 'Total Expeditions', value: '8' },
-                    { label: 'Longest Trek', value: '14 Days' },
-                  ].map((stat, i) => (
-                    <div key={i} className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-800 pb-3 last:border-0 last:pb-0 transition-colors">
-                       <span className="text-neutral-500 text-sm font-medium">{stat.label}</span>
-                       <span className="text-black dark:text-white font-bold text-sm">{stat.value}</span>
+            ) : (
+               <div className="grid grid-cols-1 gap-6">
+                  {myPosts.map(post => (
+                    <div key={post._id} className="group bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 hover:border-black dark:hover:border-white transition-all shadow-sm">
+                       <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <span className="text-[10px] font-black bg-neutral-100 dark:bg-neutral-900 px-2 py-1 rounded text-neutral-500 mr-2 uppercase tracking-widest">{post.difficulty}</span>
+                            <h4 className="inline-block text-lg font-black text-black dark:text-white uppercase tracking-tight">{post.location}</h4>
+                            <div className="flex items-center gap-2 text-neutral-400 text-[10px] font-bold mt-1 uppercase tracking-widest">
+                               <Calendar className="h-3 w-3" /> {new Date(post.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="flex gap-4">
+                             <div className="flex items-center gap-1.5 text-neutral-400">
+                                <Heart className="h-4 w-4" /> <span className="text-xs font-black">{post.likes.length}</span>
+                             </div>
+                             <div className="flex items-center gap-1.5 text-neutral-400">
+                                <MessageSquare className="h-4 w-4" /> <span className="text-xs font-black">{post.comments.length}</span>
+                             </div>
+                          </div>
+                       </div>
+                       <p className="text-neutral-600 dark:text-neutral-400 text-sm font-medium line-clamp-2 transition-colors mb-4">{post.content}</p>
+                       <div className="h-px w-full bg-neutral-100 dark:bg-neutral-900 mb-4 transition-colors"></div>
+                       <Link to="/community" className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white flex items-center gap-2 hover:gap-3 transition-all">
+                          View in network →
+                       </Link>
                     </div>
                   ))}
                </div>
+            )}
+         </div>
+         
+         <div className="space-y-8">
+            <div className="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-8 transition-colors">
+               <h3 className="font-black text-black dark:text-white mb-6 flex items-center gap-3 uppercase tracking-widest text-sm">
+                 <Award className="h-5 w-5" /> Efficiency
+               </h3>
+               <div className="space-y-6">
+                  {[
+                    { label: 'Highest Point', value: '5,364m' },
+                    { label: 'Network Points', value: '1,240' },
+                    { label: 'Validation Rate', value: '98%' },
+                  ].map((stat, i) => (
+                    <div key={i} className="flex flex-col border-b border-neutral-200 dark:border-neutral-800 pb-4 last:border-0 last:pb-0 transition-colors">
+                       <span className="text-neutral-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">{stat.label}</span>
+                       <span className="text-black dark:text-white font-black text-lg tracking-tight">{stat.value}</span>
+                    </div>
+                  ))}
+               </div>
+            </div>
+
+            <div className="bg-black/5 dark:bg-white/5 rounded-3xl p-8 border border-neutral-200 dark:border-neutral-800">
+               <h4 className="text-xs font-black uppercase tracking-widest mb-4">Discovery Engine</h4>
+               <p className="text-xs text-neutral-500 font-medium leading-relaxed mb-6">Connect your Garmin or Strava account to automatically sync high-fidelity expedition logs.</p>
+               <button className="w-full border-2 border-black dark:border-white py-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                  Sync External Core
+               </button>
             </div>
          </div>
       </div>
