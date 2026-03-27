@@ -20,6 +20,7 @@ const getPosts = async (req, res) => {
 const createPost = async (req, res) => {
   try {
     const { location, content, difficulty, imageUrl } = req.body;
+    const { awardPoints } = require('./leaderboardController');
 
     const post = new Post({
       user: req.user._id,
@@ -30,6 +31,10 @@ const createPost = async (req, res) => {
     });
 
     const createdPost = await post.save();
+    
+    // Auto-award 50 points for an expedition log
+    await awardPoints(req.user._id, 50);
+
     const populatedPost = await createdPost.populate('user', 'name avatar');
     
     res.status(201).json(populatedPost);

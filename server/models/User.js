@@ -20,6 +20,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    points: {
+      type: Number,
+      default: 0,
+    },
+    achievements: [
+      {
+        type: String,
+        default: [],
+      }
+    ],
   },
   {
     timestamps: true,

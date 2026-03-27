@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Compass, Map as MapIcon, Users, Triangle, Sun, Moon, User, Menu, X } from 'lucide-react';
+import { Compass, Map as MapIcon, Users, Triangle, Sun, Moon, User, Menu, X, Shield, Trophy } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
-import { Home, Explore, CommunityFeed, Profile } from './pages';
+import { Home, Explore, CommunityFeed, Profile, PartnerFinder, Leaderboard } from './pages';
 import { AuthModal } from './components/AuthModal';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { Shield } from 'lucide-react';
 
 function Navigation({ onOpenAuth }) {
   const { isDark, toggleTheme } = useTheme();
@@ -40,6 +41,12 @@ function Navigation({ onOpenAuth }) {
               </Link>
               <Link to="/community" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
                 <Users className="h-4 w-4" /> Community
+              </Link>
+              <Link to="/partners" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
+                <Shield className="h-4 w-4" /> Partners
+              </Link>
+              <Link to="/leaderboard" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
+                <Trophy className="h-4 w-4" /> Ranks
               </Link>
             </div>
           </div>
@@ -108,6 +115,12 @@ function Navigation({ onOpenAuth }) {
             <Link to="/community" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
               <Users className="h-5 w-5" /> Community
             </Link>
+            <Link to="/partners" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
+              <Shield className="h-5 w-5" /> Partners
+            </Link>
+            <Link to="/leaderboard" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
+              <Trophy className="h-5 w-5" /> Ranks
+            </Link>
 
             <div className="h-px w-full bg-neutral-200 dark:bg-neutral-900 my-2"></div>
 
@@ -160,6 +173,8 @@ function AppContent() {
           <Route path="/explore" element={<Explore />} />
           <Route path="/community" element={<CommunityFeed />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/partners" element={<PartnerFinder />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
         </Routes>
 
         <AuthModal 

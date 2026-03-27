@@ -17,10 +17,12 @@ app.use(cors());
 app.use(express.json());
 
 const postRoutes = require('./routes/postRoutes');
+const partnerRoutes = require('./routes/partnerRoutes');
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/partners', partnerRoutes);
 
 app.get('/', (req, res) => {
   res.send('SummitHub API is running...');
