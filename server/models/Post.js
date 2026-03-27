@@ -11,6 +11,14 @@ const postSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    coordinates: {
+      lat: { type: Number },
+      lng: { type: Number }
+    },
+    gpxData: {
+      type: String, // Stringified GeoJSON or GPX XML
+      default: ''
+    },
     content: {
       type: String,
       required: true,
@@ -38,6 +46,7 @@ const postSchema = new mongoose.Schema(
         },
         name: { type: String, required: true },
         comment: { type: String, required: true },
+        parentId: { type: mongoose.Schema.Types.ObjectId, default: null },
         date: { type: Date, default: Date.now },
       }
     ]

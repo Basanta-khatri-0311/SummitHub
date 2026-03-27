@@ -20,11 +20,12 @@ const getPartnerRequests = async (req, res) => {
 // @access  Private
 const createPartnerRequest = async (req, res) => {
   try {
-    const { location, date, description, experienceLevel, partnersNeeded } = req.body;
+    const { location, date, description, experienceLevel, partnersNeeded, coordinates } = req.body;
 
     const request = new PartnerRequest({
       user: req.user._id,
       location,
+      coordinates,
       date,
       description,
       experienceLevel,

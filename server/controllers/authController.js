@@ -87,9 +87,55 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// @desc    Follow/Unfollow user
+// @route   PUT /api/auth/follow/:id
+// @access  Private
+const followUser = async (req, res) => {
+  try {
+    const userToFollow = await User.findById(req.params.id);
+    const currentUser = await User.findById(req.user._id);
+
+    if (!userToFollow) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (currentUser.following.includes(userToFollow._id)) {
+      // Unfollow
+      currentUser.following = currentUser.following.filter(id => id.toString() !== userToFollow._id.toString());
+      userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== currentUser._id.toString());
+    } else {
+      // Follow
+      currentUser.following.push(userToFollow._id);
+      userToFollow.followers.push(currentUser._id);
+    }
+
+    await currentUser.save();
+    await userToFollow.save();
+
+    res.json({ following: currentUser.following });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get any user by ID
+// @route   GET /api/auth/user/:id
+// @access  Public
+const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 
 module.exports = {
   registerUser,
   loginUser,
   getUserProfile,
+  followUser,
+  getUserById
 };

@@ -19,12 +19,14 @@ const getPosts = async (req, res) => {
 // @access  Private
 const createPost = async (req, res) => {
   try {
-    const { location, content, difficulty, imageUrl } = req.body;
+    const { location, content, difficulty, imageUrl, coordinates, gpxData } = req.body;
     const { awardPoints } = require('./leaderboardController');
 
     const post = new Post({
       user: req.user._id,
       location,
+      coordinates,
+      gpxData,
       content,
       difficulty,
       imageUrl,
@@ -73,7 +75,7 @@ const likePost = async (req, res) => {
 // @access  Private
 const commentPost = async (req, res) => {
   try {
-    const { comment } = req.body;
+    const { comment, parentId } = req.body;
     const post = await Post.findById(req.params.id);
 
     if (!post) {
@@ -84,6 +86,7 @@ const commentPost = async (req, res) => {
       user: req.user._id,
       name: req.user.name,
       comment,
+      parentId: parentId || null
     };
 
     post.comments.push(newComment);
@@ -109,10 +112,34 @@ const getMyPosts = async (req, res) => {
   }
 };
 
+// @desc    Delete a post
+// @route   DELETE /api/posts/:id
+// @access  Private
+const deletePost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Check if user is the owner
+    if (post.user.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: 'User not authorized to delete this transmission.' });
+    }
+
+    await post.deleteOne();
+    res.json({ message: 'Transmission terminated from global feed.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getPosts,
   createPost,
   likePost,
   commentPost,
-  getMyPosts
+  getMyPosts,
+  deletePost
 };
