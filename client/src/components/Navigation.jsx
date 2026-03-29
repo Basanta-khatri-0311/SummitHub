@@ -1,148 +1,113 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Map as MapIcon, Users, Triangle, Sun, Moon, User, Menu, X, Shield, Trophy } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { Mountain, Map, Users, Trophy, LayoutGrid, LogOut, Menu, X, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export function Navigation({ onOpenAuth }) {
-  const { isDark, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const loc = useLocation();
 
-  // Close mobile menu on route change
-  React.useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location]);
+  const links = [
+    { to: '/', label: 'Home', icon: LayoutGrid },
+    { to: '/explore', label: 'Map', icon: Map },
+    { to: '/community', label: 'Feed', icon: Mountain },
+    { to: '/partners', label: 'Find Partners', icon: Users },
+    { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  ];
 
   return (
-    <nav className="border-b border-neutral-200 dark:border-neutral-900 bg-white dark:bg-[#0a0a0a] sticky top-0 z-50 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center space-x-3 shrink-0">
-            <Triangle className="h-6 w-6 text-black dark:text-white fill-black dark:fill-white transition-colors" />
-            <span className="text-xl font-extrabold tracking-tight text-black dark:text-white transition-colors">
-              SUMMITHUB
-            </span>
-          </Link>
-          
-          {/* Desktop Links */}
-          <div className="hidden md:block">
-            <div className="flex items-center space-x-10">
-              <Link to="/" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
-                <Compass className="h-4 w-4" /> Home
-              </Link>
-              <Link to="/explore" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
-                <MapIcon className="h-4 w-4" /> Explore
-              </Link>
-              <Link to="/community" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
-                <Users className="h-4 w-4" /> Community
-              </Link>
-              <Link to="/partners" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
-                <Shield className="h-4 w-4" /> Partners
-              </Link>
-              <Link to="/leaderboard" className="text-sm font-semibold tracking-wide uppercase text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-2">
-                <Trophy className="h-4 w-4" /> Ranks
-              </Link>
-            </div>
+    <nav className="nav">
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        
+        {/* Logo */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <div style={{ width: 36, height: 36, background: '#16a34a', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Mountain size={20} color="white" strokeWidth={2.5} />
           </div>
+          <span style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px' }}>SummitHub</span>
+        </Link>
 
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={toggleTheme} 
-              className="text-neutral-400 hover:text-black dark:hover:text-white transition-colors hidden sm:block"
-            >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-            
-            <div className="hidden md:flex items-center gap-4">
-              {user ? (
-                <>
-                  <Link to="/profile" className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white hover:text-neutral-500 transition-colors uppercase">
-                    <User className="h-4 w-4" />
-                    {user.name.split(' ')[0]}
-                  </Link>
-                  <button 
-                    onClick={logout}
-                    className="bg-neutral-100 hover:bg-neutral-200 text-black dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-white px-4 py-2 rounded-none text-sm font-semibold tracking-wide uppercase transition-colors flex items-center gap-2"
-                  >
-                     Logout
-                  </button>
-                </>
-              ) : (
-                <button 
-                  onClick={onOpenAuth}
-                  className="bg-black hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-200 dark:text-black px-5 py-2 rounded-none text-sm font-semibold tracking-wide uppercase transition-colors"
-                >
-                   Sign In
-                </button>
-              )}
-            </div>
-
-            {/* Mobile Hamburger Button */}
-            <div className="flex md:hidden items-center gap-3">
-              <button 
-                onClick={toggleTheme} 
-                className="text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
-              >
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-              <button 
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-black dark:text-white p-2"
-              >
-                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
-            </div>
-          </div>
+        {/* Desktop links */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="hide-mobile">
+          {links.map(link => (
+            <Link key={link.to} to={link.to} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
+              borderRadius: 10, textDecoration: 'none', fontSize: 14, fontWeight: 600,
+              color: loc.pathname === link.to ? '#16a34a' : '#64748b',
+              background: loc.pathname === link.to ? '#f0fdf4' : 'transparent',
+              transition: 'all 0.15s'
+            }}>
+              <link.icon size={16} />
+              {link.label}
+            </Link>
+          ))}
         </div>
+
+        {/* Right side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }} className="hide-mobile">
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Link to="/profile" style={{
+                display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+                padding: '7px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10,
+                fontSize: 14, fontWeight: 600, color: '#0f172a', background: 'white'
+              }}>
+                <div style={{ width: 24, height: 24, borderRadius: 6, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#16a34a' }}>
+                  {user.name?.charAt(0).toUpperCase()}
+                </div>
+                {user.name?.split(' ')[0]}
+              </Link>
+              <button onClick={logout} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 8, borderRadius: 8, display: 'flex', alignItems: 'center' }}>
+                <LogOut size={18} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={onOpenAuth} className="btn btn-ghost btn-sm">Log in</button>
+              <button onClick={onOpenAuth} className="btn btn-green btn-sm">Sign up free</button>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile hamburger */}
+        <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8 }} className="show-mobile">
+          {menuOpen ? <X size={24} color="#0f172a" /> : <Menu size={24} color="#0f172a" />}
+        </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-neutral-200 dark:border-neutral-900 bg-white dark:bg-[#0a0a0a]">
-          <div className="px-4 py-6 space-y-6 flex flex-col">
-            <Link to="/" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
-              <Compass className="h-5 w-5" /> Home
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <div style={{ background: 'white', borderTop: '1px solid #f1f5f9', padding: '16px 24px 24px' }}>
+          {links.map(link => (
+            <Link key={link.to} to={link.to} onClick={() => setMenuOpen(false)} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0',
+              textDecoration: 'none', fontSize: 15, fontWeight: 600,
+              color: loc.pathname === link.to ? '#16a34a' : '#374151',
+              borderBottom: '1px solid #f8fafc'
+            }}>
+              <link.icon size={18} />
+              {link.label}
             </Link>
-            <Link to="/explore" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
-              <MapIcon className="h-5 w-5" /> Explore
-            </Link>
-            <Link to="/community" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
-              <Users className="h-5 w-5" /> Community
-            </Link>
-            <Link to="/partners" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
-              <Shield className="h-5 w-5" /> Partners
-            </Link>
-            <Link to="/leaderboard" className="text-base font-bold tracking-widest uppercase text-black dark:text-white transition-colors flex items-center gap-3">
-              <Trophy className="h-5 w-5" /> Ranks
-            </Link>
-
-            <div className="h-px w-full bg-neutral-200 dark:bg-neutral-900 my-2"></div>
-
+          ))}
+          <div style={{ marginTop: 16 }}>
             {user ? (
-               <div className="flex flex-col gap-4">
-                  <Link to="/profile" className="text-base font-bold tracking-widest text-black dark:text-white uppercase transition-colors flex items-center gap-3">
-                    <User className="h-5 w-5" /> Profile - {user.name}
-                  </Link>
-                  <button 
-                    onClick={() => { logout(); setIsMobileMenuOpen(false); }}
-                    className="w-full bg-black text-white dark:bg-white dark:text-black px-5 py-4 font-bold tracking-widest uppercase transition-colors text-left pl-4"
-                  >
-                     Execute Logout
-                  </button>
-               </div>
+              <button onClick={() => { logout(); setMenuOpen(false); }} className="btn btn-ghost btn-full" style={{ marginTop: 8 }}>
+                <LogOut size={16} /> Log out
+              </button>
             ) : (
-                <button 
-                  onClick={() => { setIsMobileMenuOpen(false); onOpenAuth(); }}
-                  className="w-full bg-black text-white dark:bg-white dark:text-black px-5 py-4 font-bold tracking-widest uppercase transition-colors text-left pl-4"
-                >
-                   Authenticate
-                </button>
+              <button onClick={() => { onOpenAuth(); setMenuOpen(false); }} className="btn btn-green btn-full">
+                Get Started
+              </button>
             )}
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 768px) { .hide-mobile { display: none !important; } }
+        @media (min-width: 769px) { .show-mobile { display: none !important; } }
+      `}</style>
     </nav>
   );
 }

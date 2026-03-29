@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, MapPin, Calendar, Plus, MessageSquare, Shield, Check, X, Loader2 } from 'lucide-react';
+import { Users, MapPin, Calendar, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserProfileModal } from '../components/UserProfileModal';
 import toast from 'react-hot-toast';
@@ -8,309 +8,212 @@ export function PartnerFinder() {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    location: '',
-    date: '',
-    description: '',
-    experienceLevel: 'INTERMEDIATE',
-    partnersNeeded: 1,
+  const [modalOpen, setModalOpen] = useState(false);
+  const [profileId, setProfileId] = useState(null);
+  const [form, setForm] = useState({
+    location: '', date: '', description: '',
+    experienceLevel: 'INTERMEDIATE', partnersNeeded: 2,
     coordinates: { lat: 28.3949, lng: 84.1240 }
   });
 
-  // Profile Modal State
-  const [selectedProfileId, setSelectedProfileId] = useState(null);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-
   useEffect(() => {
-    fetchRequests();
+    fetch('http://localhost:5500/api/partners')
+      .then(r => r.json())
+      .then(d => { setRequests(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  const fetchRequests = async () => {
-    try {
-      const res = await fetch('http://localhost:5500/api/partners');
-      const data = await res.json();
-      setRequests(data);
-    } catch (err) {
-      toast.error("Failed to load partner requests");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
+  const handlePost = async (e) => {
     e.preventDefault();
-    if (!user) return toast.error("Authentication required");
-
+    if (!user) return toast.error('Please log in first');
     try {
       const res = await fetch('http://localhost:5500/api/partners', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify(formData)
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify(form)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      
-      setRequests([data, ...requests]);
-      setIsModalOpen(false);
-      setFormData({ ...formData, location: '', description: '' });
-      toast.success("Request Broadcasted");
-    } catch (err) {
-      toast.error(err.message);
-    }
+      setRequests(p => [data, ...p]);
+      setModalOpen(false);
+      setForm({ ...form, location: '', description: '' });
+      toast.success('Trek request posted!');
+    } catch (e) { toast.error(e.message); }
   };
 
-  const handleJoin = async (requestId) => {
-    if (!user) return toast.error("Authentication required");
+  const handleJoin = async (id) => {
+    if (!user) return toast.error('Please log in first');
     try {
-      const res = await fetch(`http://localhost:5500/api/partners/${requestId}/join`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${user.token}` }
+      const res = await fetch(`http://localhost:5500/api/partners/${id}/join`, {
+        method: 'PUT', headers: { Authorization: `Bearer ${user.token}` }
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-
-      setRequests(requests.map(r => r._id === requestId ? data : r));
-      toast.success("Mission engagement updated.");
-    } catch (err) {
-      toast.error(err.message);
-    }
+      setRequests(p => p.map(r => r._id === id ? data : r));
+      toast.success('Done!');
+    } catch (e) { toast.error(e.message); }
   };
 
-  const openProfile = (id) => {
-     setSelectedProfileId(id);
-     setIsProfileOpen(true);
-  };
+  const diffBadge = { BEGINNER: 'badge-green', INTERMEDIATE: 'badge-blue', ADVANCED: 'badge-orange', EXPERT: 'badge-red' };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-16 w-full min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
-         <div>
-            <h1 className="text-5xl font-black text-black dark:text-white tracking-tighter uppercase font-mono">
-               Squad Finder
-            </h1>
-            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em] mt-3">Tactical Personnel Acquisition</p>
-         </div>
-         <button 
-           onClick={() => {
-             if (!user) return toast.error("Authenticate to find partners");
-             setIsModalOpen(true);
-           }}
-           className="bg-black dark:bg-white text-white dark:text-black px-10 py-4 rounded-3xl font-black text-[12px] tracking-[0.2em] uppercase transition-all shadow-2xl hover:scale-105 active:scale-95 flex items-center gap-3"
-         >
-            <Plus className="h-5 w-5" /> Initialize Mission
-         </button>
-      </div>
+    <div style={{ background: '#f8fafc', minHeight: '100vh', padding: '32px 16px 80px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {loading ? (
-           <div className="col-span-full py-20 text-center text-neutral-400 font-black uppercase tracking-[0.5em] text-[10px] animate-pulse">Scanning open sectors...</div>
-        ) : requests.length === 0 ? (
-           <div className="col-span-full py-32 bg-neutral-50 dark:bg-neutral-900/50 border-4 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[3.5rem] text-center">
-              <Users className="h-16 w-16 text-neutral-300 mx-auto mb-6" />
-              <p className="text-neutral-500 font-black uppercase tracking-widest text-[10px]">No active requests found in this region.</p>
-           </div>
-        ) : (
-          requests.map(req => (
-            <div key={req._id} className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-[3rem] p-10 shadow-sm hover:border-black dark:hover:border-white transition-all relative group overflow-hidden">
-               
-               <div className="flex justify-between items-start mb-8">
-                  <div className="flex items-center gap-5">
-                     <div 
-                        onClick={() => openProfile(req.user?._id)}
-                        className="h-12 w-12 text-[10px] font-black uppercase flex items-center justify-center border-2 border-black dark:border-white rounded-2xl bg-neutral-100 dark:bg-neutral-900 transition-all cursor-pointer hover:scale-105 overflow-hidden"
-                     >
-                        {req.user?.avatar ? <img src={req.user.avatar} className="w-full h-full object-cover" /> : req.user?.name ? req.user.name.slice(0, 2) : 'UK'}
-                     </div>
-                     <div>
-                        <h3 
-                           onClick={() => openProfile(req.user?._id)}
-                           className="font-black text-lg text-black dark:text-white uppercase tracking-tight cursor-pointer hover:underline"
-                        >
-                           {req.user?.name}
-                        </h3>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">Mission Lead</p>
-                     </div>
-                  </div>
-                  <div className="bg-neutral-100 dark:bg-neutral-900 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest text-neutral-500 border border-neutral-200 dark:border-neutral-800">
-                     {req.experienceLevel}
-                  </div>
-               </div>
+        {/* Page header */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <h1 style={{ margin: '0 0 6px', fontSize: 28, fontWeight: 800, color: '#0f172a' }}>Find a Trek Partner</h1>
+            <p style={{ margin: 0, fontSize: 14, color: '#94a3b8' }}>Connect with other trekkers looking for companions</p>
+          </div>
+          <button onClick={() => user ? setModalOpen(true) : toast.error('Please log in first')} className="btn btn-green">
+            + Post a Group Trek
+          </button>
+        </div>
 
-               <div className="flex flex-col gap-4 mb-8">
-                  <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-widest text-black dark:text-white">
-                     <MapPin className="h-4 w-4 text-neutral-400" /> {req.location}
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-widest text-black dark:text-white">
-                     <Calendar className="h-4 w-4 text-neutral-400" /> {new Date(req.date).toLocaleDateString()}
-                  </div>
-               </div>
-
-               <p className="text-neutral-500 text-sm font-bold uppercase tracking-tight leading-relaxed mb-10 line-clamp-3">
-                  {req.description}
-               </p>
-
-               <div className="flex flex-col gap-6 border-t border-neutral-100 dark:border-neutral-900 pt-8 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex -space-x-3">
-                        {[...Array(req.partnersNeeded)].map((_, i) => {
-                           const partner = req.joinedPartners[i];
-                           return (
-                              <div 
-                                 key={i} 
-                                 onClick={() => partner && openProfile(partner._id || partner)}
-                                 className={`h-11 w-11 rounded-2xl border-2 border-white dark:border-black flex items-center justify-center text-[10px] font-black transition-all relative cursor-pointer hover:scale-110 z-10 ${i < req.joinedPartners?.length ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}
-                              >
-                                 {i < req.joinedPartners?.length ? (partner.name?.slice(0, 1) || 'A') : '?'}
-                              </div>
-                           );
-                        })}
-                    </div>
-                    
-                    <button 
-                        onClick={() => handleJoin(req._id)}
-                        className={`px-10 py-4 rounded-2xl font-black text-[11px] tracking-[0.2em] uppercase transition-all shadow-xl active:scale-95 ${
-                           req.joinedPartners?.some(p => (p._id || p) === user?._id)
-                           ? 'bg-rose-500 text-white'
-                           : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-80'
-                        }`}
-                    >
-                        {req.joinedPartners?.some(p => (p._id || p) === user?._id) ? 'Abort Mission' : 'Engage'}
-                    </button>
-                  </div>
-
-                  {req.joinedPartners?.length > 0 && (
-                     <div className="flex flex-wrap gap-2 pt-2">
-                        {req.joinedPartners.map((p, idx) => (
-                           <button 
-                              key={idx} 
-                              onClick={() => openProfile(p._id || p)}
-                              className="text-[9px] font-black uppercase text-neutral-400 bg-neutral-50 dark:bg-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all shadow-sm"
-                           >
-                              {p.name}
-                           </button>
-                        ))}
-                     </div>
-                  )}
-               </div>
+        {/* Quick stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 32 }}>
+          {[
+            { label: 'Open Requests', value: requests.length, color: '#16a34a' },
+            { label: 'Total Spots Needed', value: requests.reduce((a, r) => a + (r.partnersNeeded || 0), 0), color: '#2563eb' },
+            { label: 'Filled Spots', value: requests.reduce((a, r) => a + (r.joinedPartners?.length || 0), 0), color: '#d97706' },
+          ].map(s => (
+            <div key={s.label} className="card" style={{ padding: '18px 20px' }}>
+              <div style={{ fontSize: 26, fontWeight: 900, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{s.label}</div>
             </div>
-          ))
+          ))}
+        </div>
+
+        {/* Cards */}
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 280, borderRadius: 20 }} />)}
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '60px 24px' }}>
+            <p style={{ fontSize: 36, margin: '0 0 12px' }}>🧗</p>
+            <h3 style={{ margin: '0 0 8px', color: '#0f172a', fontWeight: 700 }}>No open requests</h3>
+            <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>Be the first to post a group trek!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+            {requests.map(req => {
+              const joined = (req.joinedPartners || []).some(p => (p._id || p)?.toString() === user?._id?.toString());
+              const full = req.joinedPartners?.length >= req.partnersNeeded;
+
+              return (
+                <div key={req._id} className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <button onClick={() => setProfileId(req.user?._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 12, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#16a34a', fontSize: 16, flexShrink: 0 }}>
+                        {req.user?.name?.charAt(0).toUpperCase()}
+                      </div>
+                    </button>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{req.user?.name}</div>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                        <span className={`badge ${diffBadge[req.experienceLevel] || 'badge-green'}`}>{req.experienceLevel}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#374151' }}>
+                      <MapPin size={15} color="#16a34a" style={{ flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600 }}>{req.location}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748b' }}>
+                      <Calendar size={15} color="#94a3b8" style={{ flexShrink: 0 }} />
+                      {new Date(req.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+
+                  <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b', lineHeight: 1.6, flex: 1 }}>
+                    {req.description?.slice(0, 120)}{req.description?.length > 120 ? '…' : ''}
+                  </p>
+
+                  {/* Spots visual */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>Spots filled</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: full ? '#dc2626' : '#16a34a' }}>
+                        {req.joinedPartners?.length || 0} / {req.partnersNeeded}
+                      </span>
+                    </div>
+                    <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, ((req.joinedPartners?.length || 0) / req.partnersNeeded) * 100)}%`, background: full ? '#dc2626' : '#16a34a', borderRadius: 3, transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleJoin(req._id)}
+                    disabled={full && !joined}
+                    className={`btn ${joined ? 'btn-outline' : full ? 'btn-ghost' : 'btn-green'}`}
+                    style={{ width: '100%', justifyContent: 'center' }}
+                  >
+                    {joined ? '✓ Leave Trek' : full ? 'Fully Booked' : 'Join Trek'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
-      <UserProfileModal 
-         userId={selectedProfileId}
-         isOpen={isProfileOpen}
-         onClose={() => setIsProfileOpen(false)}
-      />
-
-      {/* MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-           <div className="absolute inset-0 bg-neutral-900/40 dark:bg-black/80 backdrop-blur-md" onClick={() => setIsModalOpen(false)} />
-           <div className="relative w-full max-w-xl bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-[3rem] p-12 shadow-2xl animate-in zoom-in-95 duration-200">
-              <button onClick={() => setIsModalOpen(false)} className="absolute right-10 top-10 text-neutral-400 hover:text-black dark:hover:text-white transition-colors">
-                 <X className="h-7 w-7" />
+      {/* Post modal */}
+      {modalOpen && (
+        <div className="modal-backdrop">
+          <div className="card scale-in" style={{ width: '100%', maxWidth: 480, padding: 32, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <div>
+                <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: '#0f172a' }}>Post a Group Trek</h2>
+                <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>Find companions for your next adventure</p>
+              </div>
+              <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', borderRadius: 8, padding: 6, display: 'flex' }}>
+                <X size={20} />
               </button>
-              
-              <h2 className="text-3xl font-black text-black dark:text-white mb-2 uppercase tracking-tighter">Initialize mission</h2>
-              <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em] mb-10">Broadcast Sector Coordination</p>
-              
-              <form onSubmit={handleSubmit} className="space-y-6">
-                 <div className="grid grid-cols-2 gap-6">
-                    <div>
-                       <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Sector Target</label>
-                       <input 
-                         required
-                         type="text"
-                         className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-5 py-3 text-xs font-bold uppercase tracking-widest text-black dark:text-white focus:outline-none focus:border-black transition-all h-14"
-                         placeholder="E.G. KHUMBU"
-                         value={formData.location}
-                         onChange={e => setFormData({...formData, location: e.target.value})}
-                       />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Operatives Required</label>
-                        <input 
-                           required
-                           type="number"
-                           min="1"
-                           max="10"
-                           className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-5 py-3 text-xs font-bold text-black dark:text-white focus:outline-none focus:border-black transition-all h-14"
-                           value={formData.partnersNeeded}
-                           onChange={e => setFormData({...formData, partnersNeeded: e.target.value})}
-                        />
-                    </div>
-                 </div>
-                 
-                 <div className="grid grid-cols-2 gap-6">
-                    <div>
-                       <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Expedition Date</label>
-                       <input 
-                         required
-                         type="date"
-                         className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-5 py-3 text-xs font-bold text-black dark:text-white focus:outline-none focus:border-black transition-all h-14"
-                         value={formData.date}
-                         onChange={e => setFormData({...formData, date: e.target.value})}
-                       />
-                    </div>
-                    <div>
-                       <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">LAT/LNG Interface</label>
-                       <div className="flex gap-2">
-                          <input 
-                             placeholder="LAT"
-                             type="number" step="any"
-                             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 text-[10px] font-bold text-black dark:text-white focus:outline-none h-14"
-                             value={formData.coordinates.lat}
-                             onChange={e => setFormData({...formData, coordinates: {...formData.coordinates, lat: e.target.value}})}
-                          />
-                          <input 
-                             placeholder="LNG"
-                             type="number" step="any"
-                             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 text-[10px] font-bold text-black dark:text-white focus:outline-none h-14"
-                             value={formData.coordinates.lng}
-                             onChange={e => setFormData({...formData, coordinates: {...formData.coordinates, lng: e.target.value}})}
-                          />
-                       </div>
-                    </div>
-                 </div>
+            </div>
 
-                 <div>
-                    <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Experience Protocol</label>
-                    <select 
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest text-black dark:text-white focus:outline-none appearance-none cursor-pointer h-14"
-                      value={formData.experienceLevel}
-                      onChange={e => setFormData({...formData, experienceLevel: e.target.value})}
-                    >
-                       <option value="BEGINNER">BEGINNER</option>
-                       <option value="INTERMEDIATE">INTERMEDIATE</option>
-                       <option value="ADVANCED">ADVANCED</option>
-                       <option value="EXPERT">EXPERT</option>
-                    </select>
-                 </div>
+            <form onSubmit={handlePost} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Location *</label>
+                <input className="input" required placeholder="e.g. Everest Base Camp" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+              </div>
 
-                 <div>
-                    <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Mission Briefing</label>
-                    <textarea 
-                      required
-                      rows={4}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 text-xs font-medium text-black dark:text-white focus:outline-none focus:border-black transition-all resize-none leading-relaxed"
-                      placeholder="Detail the terrain, gear requirements, and pace..."
-                      value={formData.description}
-                      onChange={e => setFormData({...formData, description: e.target.value})}
-                    />
-                 </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Date *</label>
+                  <input className="input" type="date" required value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Partners needed</label>
+                  <input className="input" type="number" min="1" max="20" value={form.partnersNeeded} onChange={e => setForm({ ...form, partnersNeeded: parseInt(e.target.value) })} />
+                </div>
+              </div>
 
-                 <button type="submit" className="w-full bg-black dark:bg-white text-white dark:text-black py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all mt-4">
-                    Instantiate Deployment
-                 </button>
-              </form>
-           </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Experience level</label>
+                <select className="input" value={form.experienceLevel} onChange={e => setForm({ ...form, experienceLevel: e.target.value })}>
+                  <option value="BEGINNER">Beginner</option>
+                  <option value="INTERMEDIATE">Intermediate</option>
+                  <option value="ADVANCED">Advanced</option>
+                  <option value="EXPERT">Expert</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Description *</label>
+                <textarea className="input" required placeholder="Tell potential partners about the trek, what to bring, difficulty, etc." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+              </div>
+
+              <button type="submit" className="btn btn-green btn-lg btn-full" style={{ marginTop: 4 }}>Post Request</button>
+            </form>
+          </div>
         </div>
       )}
+
+      <UserProfileModal userId={profileId} isOpen={!!profileId} onClose={() => setProfileId(null)} />
     </div>
   );
 }

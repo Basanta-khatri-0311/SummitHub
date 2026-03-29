@@ -10,8 +10,6 @@ router.get('/leaderboard', getLeaderboard);
 router.put('/follow/:id', protect, followUser);
 router.get('/user/:id', getUserById);
 
-// Profile is accessible with valid token (middleware placeholder if requested later)
-// Currently a placeholder
-// router.get('/profile', protect, getUserProfile); 
+router.get('/profile', protect, getUserProfile); 
 
 module.exports = router;

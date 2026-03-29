@@ -1,138 +1,99 @@
 import React, { useState } from 'react';
-import { X, Loader2, ArrowRight } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { X, Mail, Lock, User, Loader2, Mountain } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export function AuthModal({ isOpen, onClose }) {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-
-  if (!isOpen) return null;
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-      const body = isLogin ? { email: formData.email, password: formData.password } : formData;
-
-      const res = await fetch(`http://localhost:5500${endpoint}`, {
+      const res = await fetch(`http://localhost:5500/api/auth/${isLogin ? 'login' : 'register'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(form)
       });
-      
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Authentication failed');
-      }
-
-      // Update global auth state
+      if (!res.ok) throw new Error(data.message);
       login(data);
-
-      toast.success(isLogin ? "Session established." : "Account provisioned.", {
-        className: 'dark:bg-[#111] dark:text-white bg-white text-black border border-black dark:border-white rounded-none font-medium',
-      });
-      
       onClose();
-    } catch (err) {
-      toast.error(err.message, {
-        className: 'dark:bg-[#111] dark:text-white bg-white text-black border border-red-500 rounded-none font-medium text-red-600',
-      });
+      toast.success(isLogin ? 'Welcome back!' : 'Account created!');
+    } catch (e) {
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Sharp Backdrop */}
-      <div 
-        className="absolute inset-0 bg-neutral-100/80 dark:bg-black/80 backdrop-blur-sm transition-colors"
-        onClick={onClose}
-      />
-      
-      {/* Minimalist Modal */}
-      <div className="relative w-full max-w-sm bg-white dark:bg-[#0a0a0a] border-2 border-black dark:border-white overflow-hidden p-8 animate-in fade-in zoom-in-95 duration-200 transition-colors">
-        <button 
-          onClick={onClose}
-          className="absolute right-4 top-4 text-black dark:text-white hover:rotate-90 transition-transform"
-        >
-          <X className="h-5 w-5" />
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="card scale-in" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 400, padding: 36 }}>
+        
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', borderRadius: 8, padding: 6, display: 'flex' }}>
+          <X size={20} />
         </button>
 
-        <div className="mb-10 mt-4">
-          <h2 className="text-2xl font-extrabold uppercase tracking-tight text-black dark:text-white transition-colors">
-            {isLogin ? 'Sign In' : 'Register'}
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ width: 52, height: 52, background: '#f0fdf4', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', border: '1px solid #dcfce7' }}>
+            <Mountain size={26} color="#16a34a" />
+          </div>
+          <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: '#0f172a' }}>
+            {isLogin ? 'Welcome back' : 'Join SummitHub'}
           </h2>
-          <div className="h-1 w-12 bg-black dark:bg-white mt-4 transition-colors"></div>
+          <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+            {isLogin ? 'Log in to your account' : 'Create your free account'}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {!isLogin && (
             <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-neutral-500 dark:text-neutral-400 mb-2">Name</label>
-              <input 
-                type="text"
-                required
-                className="w-full bg-transparent border-b-2 border-neutral-300 dark:border-neutral-800 px-0 py-2 text-black dark:text-white placeholder-neutral-300 dark:placeholder-neutral-700 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
-                placeholder="PROCEEDING NAME"
-                value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
-              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Full name</label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} color="#94a3b8" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                <input className="input" required placeholder="Your name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={{ paddingLeft: 40 }} />
+              </div>
             </div>
           )}
-          
+
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-neutral-500 dark:text-neutral-400 mb-2">Email</label>
-            <input 
-              type="email"
-              required
-              className="w-full bg-transparent border-b-2 border-neutral-300 dark:border-neutral-800 px-0 py-2 text-black dark:text-white placeholder-neutral-300 dark:placeholder-neutral-700 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
-              placeholder="IDENTITY@NODE.COM"
-              value={formData.email}
-              onChange={e => setFormData({...formData, email: e.target.value})}
-            />
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Email</label>
+            <div style={{ position: 'relative' }}>
+              <Mail size={16} color="#94a3b8" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+              <input className="input" type="email" required placeholder="you@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={{ paddingLeft: 40 }} />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-neutral-500 dark:text-neutral-400 mb-2">Secret</label>
-            <input 
-              type="password"
-              required
-              className="w-full bg-transparent border-b-2 border-neutral-300 dark:border-neutral-800 px-0 py-2 text-black dark:text-white placeholder-neutral-300 dark:placeholder-neutral-700 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
-              placeholder="********"
-              value={formData.password}
-              onChange={e => setFormData({...formData, password: e.target.value})}
-            />
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Password</label>
+            <div style={{ position: 'relative' }}>
+              <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+              <input className="input" type="password" required placeholder="Enter password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} style={{ paddingLeft: 40 }} />
+            </div>
           </div>
 
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-black dark:bg-white text-white dark:text-black font-extrabold uppercase tracking-widest py-4 mt-8 flex justify-between items-center px-6 disabled:opacity-70 group hover:opacity-90 transition-opacity"
-          >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (
-              <>
-                 <span>{isLogin ? 'Authenticate' : 'Initialize'}</span>
-                 <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </>
-            )}
+          <button type="submit" disabled={loading} className="btn btn-green btn-lg btn-full" style={{ marginTop: 8 }}>
+            {loading
+              ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Loading…</>
+              : isLogin ? 'Log In' : 'Create Account'
+            }
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-900 text-xs font-semibold tracking-wide uppercase text-neutral-500 dark:text-neutral-400">
-          <button 
-            type="button" 
-            onClick={() => setIsLogin(!isLogin)}
-            className="hover:text-black dark:hover:text-white flex items-center gap-2 transition-colors"
-          >
-            {isLogin ? 'CREATE NEW IDENTITY →' : 'HAVE IDENTITY? AUTHENTICATE →'}
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#64748b' }}>
+          {isLogin ? "Don't have an account? " : 'Already have an account? '}
+          <button onClick={() => setIsLogin(!isLogin)} style={{ background: 'none', border: 'none', color: '#16a34a', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+            {isLogin ? 'Sign up free' : 'Log in'}
           </button>
-        </div>
+        </p>
       </div>
     </div>
   );

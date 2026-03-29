@@ -1,183 +1,199 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Target, Compass, Image as ImageIcon, Settings, Heart, Award, Map as MapIcon, Calendar, MessageSquare } from 'lucide-react';
+import { ImageIcon, Heart, MessageSquare, Users, UserCheck, Compass, Loader2 } from 'lucide-react';
 import { Navigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export function Profile() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('posts');
+  const { user, profileData, following, isFollowing, toggleFollow, refreshProfile } = useAuth();
+  const [activeTab, setActiveTab] = useState('treks');
   const [myPosts, setMyPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     if (user) {
       fetchMyPosts();
+      refreshProfile();
     }
   }, [user]);
 
   const fetchMyPosts = async () => {
+    setLoading(true);
     try {
       const res = await fetch('http://localhost:5500/api/posts/my-posts', {
-        headers: { 'Authorization': `Bearer ${user.token}` }
+        headers: { Authorization: `Bearer ${user.token}` }
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setMyPosts(data);
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
+      setMyPosts(Array.isArray(data) ? data : []);
+    } catch {}
+    finally { setLoading(false); }
   };
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
+  if (!user) return <Navigate to="/" replace />;
+
+  const myFollowing = profileData?.following || [];
+  const myFollowers = profileData?.followers || [];
+
+  const tabs = [
+    { id: 'treks', label: 'My Treks', count: myPosts.length },
+    { id: 'following', label: 'Following', count: myFollowing.length },
+    { id: 'followers', label: 'Followers', count: myFollowers.length },
+  ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full min-h-[calc(100vh-64px)]">
-      {/* Sleek User Banner */}
-      <div className="bg-neutral-100 dark:bg-neutral-900 rounded-3xl p-8 md:p-12 mb-10 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden transition-colors border border-neutral-200 dark:border-neutral-800">
-        
-        {/* Avatar */}
-        <div className="relative group">
-           <div className="h-32 w-32 rounded-full border-4 border-white dark:border-black flex items-center justify-center bg-black dark:bg-white shrink-0 overflow-hidden shadow-xl transition-colors">
-             <span className="text-5xl font-extrabold text-white dark:text-black tracking-tighter">
-               {user.name ? user.name.slice(0, 2).toUpperCase() : 'ME'}
-             </span>
-           </div>
-           <button className="absolute bottom-0 right-0 bg-white dark:bg-black p-2 rounded-full shadow-lg border border-neutral-200 dark:border-neutral-800 hover:scale-105 transition-transform text-black dark:text-white">
-             <ImageIcon className="h-5 w-5" />
-           </button>
-        </div>
+    <div style={{ background: '#f8fafc', minHeight: '100vh', paddingBottom: 80 }}>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 16px' }}>
 
-        {/* Info */}
-        <div className="flex-1 text-center md:text-left z-10">
-          <div className="inline-block border border-black dark:border-white px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase mb-4 text-neutral-500 dark:text-neutral-400">
-            Active Explorer
+        {/* Profile header card */}
+        <div className="card" style={{ padding: '32px 36px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+          {/* Big avatar */}
+          <div style={{
+            width: 90, height: 90, borderRadius: 22, background: '#f0fdf4',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 36, fontWeight: 800, color: '#16a34a', border: '3px solid #dcfce7', flexShrink: 0
+          }}>
+            {profileData?.avatar
+              ? <img src={profileData.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 19 }} />
+              : user.name?.charAt(0).toUpperCase()}
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-black dark:text-white mb-2 tracking-tight uppercase">
-            {user.name}
-          </h1>
-          <p className="text-neutral-500 font-bold flex items-center justify-center md:justify-start gap-2 text-xs uppercase tracking-widest">
-            <MapPin className="h-3.5 w-3.5" /> Sector: North Himalayas
-          </p>
-          
-          <div className="mt-8 flex flex-wrap gap-4 justify-center md:justify-start">
-             <div className="flex flex-col">
-                <span className="text-2xl font-black text-black dark:text-white transition-colors">{myPosts.length}</span>
-                <span className="text-[10px] font-bold text-neutral-500 tracking-widest uppercase">Expeditions</span>
-             </div>
-             <div className="w-px h-8 bg-neutral-200 dark:bg-neutral-800 my-auto"></div>
-             <div className="flex flex-col">
-                <span className="text-2xl font-black text-black dark:text-white transition-colors">12</span>
-                <span className="text-[10px] font-bold text-neutral-500 tracking-widest uppercase">Achievements</span>
-             </div>
+
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 800, color: '#0f172a' }}>{user.name}</h1>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#94a3b8' }}>{user.email}</p>
+
+            {/* Stats row */}
+            <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Treks', value: myPosts.length },
+                { label: 'Following', value: myFollowing.length },
+                { label: 'Followers', value: myFollowers.length },
+                { label: 'Points', value: profileData?.points || 0 },
+              ].map(s => (
+                <div key={s.label}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>{s.value}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-        
-        <button className="absolute top-8 right-8 p-3 text-neutral-400 hover:text-black dark:hover:text-white transition-colors bg-white dark:bg-black rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-800">
-           <Settings className="h-5 w-5 hover:rotate-90 transition-transform" />
-        </button>
-      </div>
 
-      {/* Tabs Layout */}
-      <div className="flex gap-10 border-b border-neutral-200 dark:border-neutral-800 mb-10 transition-colors">
-        {['posts', 'stats', 'awards'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-4 text-xs font-bold uppercase tracking-[0.2em] transition-colors relative ${
-              activeTab === tab 
-                ? 'text-black dark:text-white' 
-                : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
-            }`}
-          >
-            {tab === 'posts' ? 'Mission Logs' : tab}
-            {activeTab === tab && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black dark:bg-white rounded-t-full transition-colors" />
-            )}
-          </button>
-        ))}
-      </div>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'white', padding: 6, borderRadius: 14, border: '1px solid #f1f5f9', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+          {tabs.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+              flex: 1, padding: '10px 8px', border: 'none', borderRadius: 10, cursor: 'pointer',
+              fontSize: 14, fontWeight: 600, transition: 'all 0.15s',
+              background: activeTab === tab.id ? '#16a34a' : 'transparent',
+              color: activeTab === tab.id ? 'white' : '#64748b',
+            }}>
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+        </div>
 
-      {/* Content Area */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-         <div className="md:col-span-2">
-            {loading ? (
-               <div className="text-center py-20 text-neutral-400 uppercase tracking-widest text-xs font-bold animate-pulse">Decrypting logs...</div>
-            ) : myPosts.length === 0 ? (
-               <div className="bg-white dark:bg-[#0a0a0a] border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl p-16 flex flex-col items-center justify-center text-center transition-colors">
-                  <div className="h-20 w-20 bg-neutral-50 dark:bg-neutral-900 rounded-2xl flex items-center justify-center mb-6 transition-colors border border-neutral-100 dark:border-neutral-800">
-                     <ImageIcon className="h-10 w-10 text-neutral-300" />
+        {/* Tab content */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: '#16a34a', margin: '0 auto' }} />
+          </div>
+        ) : activeTab === 'treks' ? (
+          /* Trek grid */
+          myPosts.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '48px 24px' }}>
+              <p style={{ fontSize: 28, margin: '0 0 10px' }}>🥾</p>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>No treks yet</h3>
+              <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>
+                <Link to="/community" style={{ color: '#16a34a', fontWeight: 600 }}>Share your first trek</Link> to get started!
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+              {myPosts.map(post => (
+                <div key={post._id} className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column' }}>
+                  {post.imageUrl && (
+                    <div style={{ height: 140, borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
+                      <img src={post.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{post.location}</h4>
+                    <span className="badge badge-green" style={{ fontSize: 10 }}>{post.difficulty}</span>
                   </div>
-                  <h3 className="text-xl font-bold text-black dark:text-white mb-2 uppercase tracking-tight">System Empty</h3>
-                  <p className="text-neutral-500 max-w-xs mx-auto mb-8 text-sm font-medium">You haven't initialized any expedition logs. Start your first journey transmission.</p>
-                  <Link to="/community" className="bg-black dark:bg-white text-white dark:text-black px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
-                    Access Network
-                  </Link>
-               </div>
-            ) : (
-               <div className="grid grid-cols-1 gap-6">
-                  {myPosts.map(post => (
-                    <div key={post._id} className="group bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 hover:border-black dark:hover:border-white transition-all shadow-sm">
-                       <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <span className="text-[10px] font-black bg-neutral-100 dark:bg-neutral-900 px-2 py-1 rounded text-neutral-500 mr-2 uppercase tracking-widest">{post.difficulty}</span>
-                            <h4 className="inline-block text-lg font-black text-black dark:text-white uppercase tracking-tight">{post.location}</h4>
-                            <div className="flex items-center gap-2 text-neutral-400 text-[10px] font-bold mt-1 uppercase tracking-widest">
-                               <Calendar className="h-3 w-3" /> {new Date(post.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div className="flex gap-4">
-                             <div className="flex items-center gap-1.5 text-neutral-400">
-                                <Heart className="h-4 w-4" /> <span className="text-xs font-black">{post.likes.length}</span>
-                             </div>
-                             <div className="flex items-center gap-1.5 text-neutral-400">
-                                <MessageSquare className="h-4 w-4" /> <span className="text-xs font-black">{post.comments.length}</span>
-                             </div>
-                          </div>
-                       </div>
-                       <p className="text-neutral-600 dark:text-neutral-400 text-sm font-medium line-clamp-2 transition-colors mb-4">{post.content}</p>
-                       <div className="h-px w-full bg-neutral-100 dark:bg-neutral-900 mb-4 transition-colors"></div>
-                       <Link to="/community" className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white flex items-center gap-2 hover:gap-3 transition-all">
-                          View in network →
-                       </Link>
-                    </div>
-                  ))}
-               </div>
-            )}
-         </div>
-         
-         <div className="space-y-8">
-            <div className="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-8 transition-colors">
-               <h3 className="font-black text-black dark:text-white mb-6 flex items-center gap-3 uppercase tracking-widest text-sm">
-                 <Award className="h-5 w-5" /> Efficiency
-               </h3>
-               <div className="space-y-6">
-                  {[
-                    { label: 'Highest Point', value: '5,364m' },
-                    { label: 'Network Points', value: '1,240' },
-                    { label: 'Validation Rate', value: '98%' },
-                  ].map((stat, i) => (
-                    <div key={i} className="flex flex-col border-b border-neutral-200 dark:border-neutral-800 pb-4 last:border-0 last:pb-0 transition-colors">
-                       <span className="text-neutral-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">{stat.label}</span>
-                       <span className="text-black dark:text-white font-black text-lg tracking-tight">{stat.value}</span>
-                    </div>
-                  ))}
-               </div>
+                  <p style={{ margin: '0 0 14px', fontSize: 13, color: '#64748b', lineHeight: 1.55, flex: 1 }}>
+                    {post.content?.slice(0, 100)}{post.content?.length > 100 ? '…' : ''}
+                  </p>
+                  <div style={{ display: 'flex', gap: 14, fontSize: 13, color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={14} /> {post.likes?.length || 0}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MessageSquare size={14} /> {post.comments?.length || 0}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 12 }}>{new Date(post.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <div className="bg-black/5 dark:bg-white/5 rounded-3xl p-8 border border-neutral-200 dark:border-neutral-800">
-               <h4 className="text-xs font-black uppercase tracking-widest mb-4">Discovery Engine</h4>
-               <p className="text-xs text-neutral-500 font-medium leading-relaxed mb-6">Connect your Garmin or Strava account to automatically sync high-fidelity expedition logs.</p>
-               <button className="w-full border-2 border-black dark:border-white py-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
-                  Sync External Core
-               </button>
+          )
+        ) : activeTab === 'following' ? (
+          /* Following list */
+          myFollowing.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '48px 24px' }}>
+              <p style={{ fontSize: 28, margin: '0 0 10px' }}>🧭</p>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Not following anyone</h3>
+              <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>
+                <Link to="/community" style={{ color: '#16a34a', fontWeight: 600 }}>Browse the feed</Link> to find trekkers to follow.
+              </p>
             </div>
-         </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {myFollowing.map(f => (
+                <PersonRow key={f._id} person={f} showUnfollow isFollowingFunc={isFollowing} onToggle={toggleFollow} />
+              ))}
+            </div>
+          )
+        ) : (
+          /* Followers list */
+          myFollowers.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '48px 24px' }}>
+              <p style={{ fontSize: 28, margin: '0 0 10px' }}>👥</p>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>No followers yet</h3>
+              <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>Share more treks to build your audience!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {myFollowers.map(f => (
+                <PersonRow key={f._id} person={f} isFollowingFunc={isFollowing} onToggle={toggleFollow} />
+              ))}
+            </div>
+          )
+        )}
       </div>
     </div>
   );
+}
+
+function PersonRow({ person, isFollowingFunc, onToggle }) {
+  const following = isFollowingFunc(person._id);
+  return (
+    <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: 14, background: '#f0fdf4',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, fontWeight: 700, color: '#16a34a', flexShrink: 0
+      }}>
+        {person.avatar
+          ? <img src={person.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+          : person.name?.charAt(0).toUpperCase()}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{person.name}</div>
+        <div style={{ fontSize: 12, color: '#94a3b8' }}>Trek enthusiast · {person.points || 0} pts</div>
+      </div>
+      <button onClick={() => onToggle(person._id)} className={`btn-follow${following ? ' following' : ''}`}>
+        {following ? <><UserCheck size={14} /> Following</> : <><Users size={14} /> Follow</>}
+      </button>
+    </div>
+  );
+}
+
+function MessageSquare(props) {
+  return <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width={props.size || 24} height={props.size || 24}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
 }

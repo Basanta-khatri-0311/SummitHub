@@ -4,7 +4,6 @@ import { Toaster } from 'react-hot-toast';
 import { Home, Explore, CommunityFeed, Profile, PartnerFinder, Leaderboard } from './pages';
 import { AuthModal } from './components/AuthModal';
 import { Navigation } from './components/Navigation';
-import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 
 function AppContent() {
@@ -12,31 +11,26 @@ function AppContent() {
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-white dark:bg-[#0a0a0a] text-black dark:text-white font-sans selection:bg-black/10 dark:selection:bg-white/10 transition-colors">
-        <Toaster position="top-center" toastOptions={{
-          style: {
-            background: 'var(--bg-primary)',
-            color: 'var(--text-primary)',
-            border: '1px solid currentColor',
-            borderRadius: '0px'
-          }
-        }} />
-        
-        <Navigation onOpenAuth={() => setIsAuthModalOpen(true)} />
-
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/community" element={<CommunityFeed />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/partners" element={<PartnerFinder />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-        </Routes>
-
-        <AuthModal 
-          isOpen={isAuthModalOpen} 
-          onClose={() => setIsAuthModalOpen(false)} 
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: { borderRadius: 12, fontSize: 14, fontWeight: 600, boxShadow: '0 8px 25px rgba(0,0,0,0.12)' },
+            success: { iconTheme: { primary: '#16a34a', secondary: 'white' } }
+          }}
         />
+        <Navigation onOpenAuth={() => setIsAuthModalOpen(true)} />
+        <main style={{ flex: 1 }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/explore" element={<Explore />} />
+            <Route path="/community" element={<CommunityFeed />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/partners" element={<PartnerFinder />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+          </Routes>
+        </main>
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       </div>
     </Router>
   );
@@ -45,9 +39,7 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
+      <AppContent />
     </AuthProvider>
   );
 }

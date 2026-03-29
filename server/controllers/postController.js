@@ -57,7 +57,8 @@ const likePost = async (req, res) => {
     }
 
     // Check if post is already liked by this user
-    if (post.likes.includes(req.user._id)) {
+    const hasLiked = post.likes.some(id => id.toString() === req.user._id.toString());
+    if (hasLiked) {
       post.likes = post.likes.filter((userId) => userId.toString() !== req.user._id.toString());
     } else {
       post.likes.push(req.user._id);

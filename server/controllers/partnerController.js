@@ -56,7 +56,8 @@ const joinPartnerRequest = async (req, res) => {
       return res.status(400).json({ message: 'You cannot join your own request' });
     }
 
-    if (request.joinedPartners.includes(req.user._id)) {
+    const isJoined = request.joinedPartners.some(id => id.toString() === req.user._id.toString());
+    if (isJoined) {
       // Unjoin
       request.joinedPartners = request.joinedPartners.filter(id => id.toString() !== req.user._id.toString());
     } else {

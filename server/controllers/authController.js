@@ -70,7 +70,9 @@ const loginUser = async (req, res) => {
 // @access  Private
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id)
+      .populate('following', 'name avatar')
+      .populate('followers', 'name avatar');
 
     if (user) {
       res.json({
@@ -78,6 +80,9 @@ const getUserProfile = async (req, res) => {
         name: user.name,
         email: user.email,
         avatar: user.avatar,
+        following: user.following,
+        followers: user.followers,
+        points: user.points
       });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -95,11 +100,13 @@ const followUser = async (req, res) => {
     const userToFollow = await User.findById(req.params.id);
     const currentUser = await User.findById(req.user._id);
 
-    if (!userToFollow) {
-      return res.status(404).json({ message: 'User not found' });
+    if (userToFollow._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({ message: 'You cannot follow yourself' });
     }
 
-    if (currentUser.following.includes(userToFollow._id)) {
+    const isFollowing = currentUser.following.some(id => id.toString() === userToFollow._id.toString());
+
+    if (isFollowing) {
       // Unfollow
       currentUser.following = currentUser.following.filter(id => id.toString() !== userToFollow._id.toString());
       userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== currentUser._id.toString());
@@ -112,7 +119,7 @@ const followUser = async (req, res) => {
     await currentUser.save();
     await userToFollow.save();
 
-    res.json({ following: currentUser.following });
+    res.json({ following: currentUser.following.map(id => id.toString()) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

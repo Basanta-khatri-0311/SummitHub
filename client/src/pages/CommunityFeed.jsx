@@ -1,333 +1,316 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, MapPin, MoreHorizontal, Image as ImageIcon, CornerDownRight, UserPlus, UserCheck, Loader2, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Trash2, Send, UserPlus, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import toGeoJSON from 'togeojson';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { CreatePost } from '../components/CreatePost';
 import { UserProfileModal } from '../components/UserProfileModal';
-import toast from 'react-hot-toast';
+
+const PIN_ICON = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+});
+
+function parseGPX(str) {
+  if (!str) return null;
+  try {
+    const xml = new DOMParser().parseFromString(str, 'text/xml');
+    const geo = toGeoJSON.gpx(xml);
+    const coords = geo.features
+      .filter(f => f.geometry?.type === 'LineString')
+      .flatMap(f => f.geometry.coordinates.map(c => [c[1], c[0]]));
+    return coords.length ? coords : null;
+  } catch { return null; }
+}
+
+function Avatar({ name, avatar, size = 40 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.28,
+      background: '#f0fdf4', border: '2px solid #dcfce7',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.32, fontWeight: 700, color: '#16a34a', overflow: 'hidden', flexShrink: 0
+    }}>
+      {avatar
+        ? <img src={avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : name?.charAt(0).toUpperCase() || '?'}
+    </div>
+  );
+}
+
+function PostCard({ post, onDelete, onLike, onComment }) {
+  const { user, isFollowing, toggleFollow } = useAuth();
+  const [showMap, setShowMap] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [replyTo, setReplyTo] = useState(null);
+  const [profModal, setProfModal] = useState(false);
+
+  const coords = parseGPX(post.gpxData);
+  const pin = post.coordinates?.lat ? [post.coordinates.lat, post.coordinates.lng] : null;
+  const hasMap = coords || pin;
+  const mapCenter = pin || (coords ? coords[0] : [28.39, 84.12]);
+
+  const liked = post.likes?.some(id => (id._id || id).toString() === user?._id?.toString());
+  const isOwn = post.user?._id === user?._id || post.user?._id?.toString() === user?._id?.toString();
+  const postUserId = post.user?._id;
+  const following = postUserId ? isFollowing(postUserId) : false;
+
+  const rootComments = (post.comments || []).filter(c => !c.parentId);
+
+  const submitComment = () => {
+    if (!commentText.trim()) return;
+    onComment(post._id, commentText, replyTo);
+    setCommentText('');
+    setReplyTo(null);
+  };
+
+  const diffColor = {
+    EASY: '#16a34a', MODERATE: '#d97706', HARD: '#dc2626', EXTREME: '#7c3aed'
+  }[post.difficulty] || '#64748b';
+
+  return (
+    <article className="card fade-up" style={{ overflow: 'hidden' }}>
+      {/* Image */}
+      {post.imageUrl && (
+        <div style={{ margin: '-1px -1px 0', overflow: 'hidden', height: 240, borderRadius: '20px 20px 0 0' }}>
+          <img src={post.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      )}
+
+      <div style={{ padding: '20px 24px' }}>
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <button onClick={() => setProfModal(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <Avatar name={post.user?.name} avatar={post.user?.avatar} size={44} />
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={() => setProfModal(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+                {post.user?.name || 'Trekker'}
+              </button>
+              {user && !isOwn && (
+                <button onClick={() => toggleFollow(postUserId)} className={`btn-follow${following ? ' following' : ''}`} style={{ padding: '3px 10px', fontSize: 12 }}>
+                  {following ? <><UserCheck size={12} /> Following</> : <><UserPlus size={12} /> Follow</>}
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+              <MapPin size={12} />
+              <span>{post.location}</span>
+              <span>·</span>
+              <span>{new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="badge" style={{ background: `${diffColor}15`, color: diffColor }}>{post.difficulty}</span>
+            {isOwn && (
+              <button onClick={() => onDelete(post._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', borderRadius: 8, padding: 6, display: 'flex' }}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <p style={{ margin: '0 0 16px', fontSize: 15, color: '#374151', lineHeight: 1.65 }}>{post.content}</p>
+
+        {/* Map toggle */}
+        {hasMap && (
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => setShowMap(!showMap)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 12px', cursor: 'pointer' }}
+            >
+              {showMap ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              {showMap ? 'Hide route map' : 'Show route on map'}
+            </button>
+            {showMap && (
+              <div style={{ height: 256, marginTop: 10, borderRadius: 14, overflow: 'hidden', border: '1px solid #f1f5f9' }}>
+                <MapContainer center={mapCenter} zoom={12} style={{ height: '100%', width: '100%' }} zoomControl attributionControl={false}>
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  {coords && <Polyline positions={coords} pathOptions={{ color: '#16a34a', weight: 3 }} />}
+                  {pin && <Marker position={pin} icon={PIN_ICON} />}
+                </MapContainer>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="divider" style={{ margin: '16px 0' }} />
+
+        {/* Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <button
+            onClick={() => onLike(post._id)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: liked ? '#dc2626' : '#64748b', padding: 0 }}
+          >
+            <Heart size={18} fill={liked ? '#dc2626' : 'none'} color={liked ? '#dc2626' : '#64748b'} />
+            {post.likes?.length || 0}
+          </button>
+          <button
+            onClick={() => setShowComments(!showComments)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#64748b', padding: 0 }}
+          >
+            <MessageCircle size={18} />
+            {post.comments?.length || 0}
+          </button>
+        </div>
+
+        {/* Comments */}
+        {showComments && (
+          <div style={{ marginTop: 16 }}>
+            {/* Comment list */}
+            {rootComments.length > 0 && (
+              <div style={{ marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {rootComments.map((c, i) => (
+                  <div key={i}>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <Avatar name={c.name} size={32} />
+                      <div style={{ flex: 1, background: '#f8fafc', borderRadius: 12, padding: '8px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{c.name}</span>
+                          <span style={{ fontSize: 11, color: '#cbd5e1' }}>{new Date(c.date).toLocaleDateString()}</span>
+                          <button onClick={() => setReplyTo(c._id)} style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Reply</button>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{c.comment}</p>
+                      </div>
+                    </div>
+                    {/* Replies */}
+                    {(post.comments || []).filter(r => r.parentId === c._id).map((r, ri) => (
+                      <div key={ri} style={{ display: 'flex', gap: 10, marginLeft: 42, marginTop: 8 }}>
+                        <Avatar name={r.name} size={28} />
+                        <div style={{ flex: 1, background: '#f8fafc', borderRadius: 10, padding: '6px 12px' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{r.name}</span>
+                          <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>{r.comment}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Reply indicator */}
+            {replyTo && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 12px', marginBottom: 8, fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+                Replying to {(post.comments || []).find(c => c._id === replyTo)?.name}
+                <button onClick={() => setReplyTo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12 }}>Cancel</button>
+              </div>
+            )}
+
+            {/* Input */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <input
+                className="input"
+                style={{ flex: 1, padding: '10px 14px' }}
+                placeholder="Write a comment…"
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && submitComment()}
+              />
+              <button onClick={submitComment} className="btn btn-green btn-sm" style={{ height: 40, width: 40, padding: 0, borderRadius: 10, flexShrink: 0 }}>
+                <Send size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Profile modal */}
+      <UserProfileModal userId={postUserId} isOpen={profModal} onClose={() => setProfModal(false)} />
+    </article>
+  );
+}
 
 export function CommunityFeed() {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [commentText, setCommentText] = useState({});
-  const [replyTo, setReplyTo] = useState({});
-  const [following, setFollowing] = useState([]);
-  
-  // Profile Modal State
-  const [selectedProfileId, setSelectedProfileId] = useState(null);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
-    fetchPosts();
-    if (user) fetchFollowing();
-  }, [user]);
-
-  const fetchPosts = async () => {
-    try {
-      const res = await fetch('http://localhost:5500/api/posts');
-      const data = await res.json();
-      setPosts(data);
-    } catch (err) {
-      toast.error('Failed to load community feed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchFollowing = async () => {
-     try {
-        const res = await fetch('http://localhost:5500/api/auth/profile', {
-            headers: { 'Authorization': `Bearer ${user.token}` }
-        });
-        const data = await res.json();
-        setFollowing(data.following || []);
-     } catch (e) {}
-  };
+    fetch('http://localhost:5500/api/posts')
+      .then(r => r.json())
+      .then(data => { setPosts(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
   const handleLike = async (postId) => {
-    if (!user) return toast.error("Please sign in to like posts");
+    if (!user) return toast.error('Please log in to like posts');
     try {
       const res = await fetch(`http://localhost:5500/api/posts/${postId}/like`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${user.token}` }
+        method: 'PUT', headers: { Authorization: `Bearer ${user.token}` }
       });
-      if (res.ok) {
-        const updatedLikes = await res.json();
-        setPosts(posts.map(p => p._id === postId ? { ...p, likes: updatedLikes } : p));
-      }
-    } catch (err) {
-      toast.error("Failed to like post");
-    }
-  };
-
-  const handleFollow = async (userId) => {
-     if (!user) return toast.error("Sign in to follow");
-     try {
-        const res = await fetch(`http://localhost:5500/api/auth/follow/${userId}`, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${user.token}` }
-        });
-        const data = await res.json();
-        setFollowing(data.following);
-        toast.success("Network status updated.");
-     } catch (e) {
-        toast.error("Operation failed.");
-     }
+      const likes = await res.json();
+      setPosts(p => p.map(pp => pp._id === postId ? { ...pp, likes } : pp));
+    } catch {}
   };
 
   const handleDelete = async (postId) => {
-     if (!window.confirm("Terminate this transmission permanently?")) return;
-     try {
-        const res = await fetch(`http://localhost:5500/api/posts/${postId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${user.token}` }
-        });
-        if (res.ok) {
-           setPosts(posts.filter(p => p._id !== postId));
-           toast.success("Transmission cleared.");
-        }
-     } catch (e) {
-        toast.error("Delete failed.");
-     }
+    if (!window.confirm('Delete this trek post?')) return;
+    try {
+      const res = await fetch(`http://localhost:5500/api/posts/${postId}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${user.token}` }
+      });
+      if (res.ok) { setPosts(p => p.filter(pp => pp._id !== postId)); toast.success('Deleted!'); }
+    } catch {}
   };
 
-  const handleComment = async (postId) => {
-    if (!user) return toast.error("Please sign in to ping");
-    const text = commentText[postId];
-    if (!text || text.trim() === '') return;
-
+  const handleComment = async (postId, comment, parentId) => {
+    if (!user) return toast.error('Please log in to comment');
     try {
       const res = await fetch(`http://localhost:5500/api/posts/${postId}/comment`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}` 
-        },
-        body: JSON.stringify({ 
-           comment: text,
-           parentId: replyTo[postId] || null 
-        })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ comment, parentId: parentId || null })
       });
-      
-      if (res.ok) {
-        const updatedComments = await res.json();
-        setPosts(posts.map(p => p._id === postId ? { ...p, comments: updatedComments } : p));
-        setCommentText({ ...commentText, [postId]: '' });
-        setReplyTo({ ...replyTo, [postId]: null });
-        toast.success("Ping successful.");
-      }
-    } catch (err) {
-      toast.error("Failed to post comment");
-    }
-  };
-
-  const openProfile = (id) => {
-     setSelectedProfileId(id);
-     setIsProfileOpen(true);
+      const comments = await res.json();
+      setPosts(p => p.map(pp => pp._id === postId ? { ...pp, comments } : pp));
+    } catch {}
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-16 w-full min-h-screen">
-      <div className="flex justify-between items-center mb-16">
-         <div>
-            <h1 className="text-5xl font-black text-black dark:text-white tracking-tighter uppercase font-mono">
-               Global Feed
-            </h1>
-            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em] mt-3">Active Network Transmissions</p>
-         </div>
-         <button 
-            onClick={() => {
-              if(!user) return toast.error("Authentication required.");
-              setIsCreateOpen(true);
-            }}
-            className="bg-black dark:bg-white text-white dark:text-black px-10 py-4 rounded-3xl font-black text-[11px] tracking-[0.2em] uppercase transition-all shadow-2xl hover:scale-105 active:scale-95"
-         >
-            Initialize Entry
-         </button>
-      </div>
+    <div style={{ background: '#f8fafc', minHeight: '100vh', paddingBottom: 80 }}>
+      <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 16px' }}>
 
-      <CreatePost 
-        isOpen={isCreateOpen} 
-        onClose={() => setIsCreateOpen(false)} 
-        onPostCreated={(newPost) => setPosts([newPost, ...posts])}
-      />
-
-      <div className="space-y-16">
-        {loading ? (
-           <div className="text-center py-32 text-neutral-400 font-black uppercase tracking-[0.5em] text-[10px] animate-pulse">Decrypting secure pings...</div>
-        ) : posts.length === 0 ? (
-           <div className="text-center py-32 text-neutral-500 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[3rem] font-black uppercase tracking-widest text-[10px]">
-              No expeditions logged in current sector.
-           </div>
-        ) : (
-        posts.map(post => (
-          <div key={post._id} className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-10 shadow-sm transition-all hover:border-black dark:hover:border-white group">
-            
-            {/* Header */}
-            <div className="flex justify-between items-start mb-8">
-              <div className="flex items-center gap-5">
-                <div 
-                   onClick={() => openProfile(post.user?._id)}
-                   className="h-14 w-14 rounded-2xl border-2 border-black dark:border-white flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white font-black text-xs uppercase overflow-hidden shrink-0 cursor-pointer hover:scale-105 transition-transform"
-                >
-                  {post.user?.avatar ? <img src={post.user.avatar} className="w-full h-full object-cover" /> : post.user?.name ? post.user.name.slice(0, 2) : 'UK'}
-                </div>
-                <div>
-                   <div className="flex items-center gap-3">
-                      <h3 
-                        onClick={() => openProfile(post.user?._id)}
-                        className="font-black text-lg uppercase tracking-tight text-black dark:text-white transition-colors cursor-pointer hover:underline"
-                      >
-                        {post.user?.name || 'UNKNOWN_OPERATIVE'}
-                      </h3>
-                      {user && post.user?._id !== user._id && (
-                         <button 
-                           onClick={() => handleFollow(post.user?._id)}
-                           className="text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
-                         >
-                            {following.includes(post.user?._id) ? <UserCheck className="h-4 w-4 text-emerald-500" /> : <UserPlus className="h-4 w-4" />}
-                         </button>
-                      )}
-                   </div>
-                  <div className="flex items-center text-[10px] font-bold text-neutral-500 gap-2 mt-1 uppercase tracking-widest transition-colors cursor-default">
-                    <MapPin className="h-3 w-3" /> {post.location} 
-                    <span className="opacity-30">/</span> 
-                    {new Date(post.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                 {user?._id === post.user?._id && (
-                    <button onClick={() => handleDelete(post._id)} className="text-neutral-400 hover:text-rose-500 transition-colors">
-                       <Trash2 className="h-5 w-5" />
-                    </button>
-                 )}
-                 <button className="text-neutral-400 hover:text-black dark:hover:text-white transition-colors">
-                   <MoreHorizontal className="h-6 w-6" />
-                 </button>
-              </div>
-            </div>
-
-            {/* Content Area */}
-            {post.imageUrl && (
-              <div className="mb-8 rounded-3xl overflow-hidden bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 aspect-video flex items-center justify-center transition-colors group-hover:border-black dark:group-hover:border-white">
-                 <img src={post.imageUrl} alt="Trek" className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105" onError={(e) => e.target.style.display = 'none'} />
-              </div>
-            )}
-            
-            <p className="text-black dark:text-neutral-200 font-black text-xl leading-[1.3] tracking-tight transition-colors mb-8 whitespace-pre-wrap">
-              {post.content}
-            </p>
-
-            <div className="flex gap-2 mb-10">
-               <span className="text-[10px] font-black text-black dark:text-white bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 px-4 py-1.5 rounded-xl uppercase tracking-widest transition-colors">
-                 Class: {post.difficulty}
-               </span>
-               {post.gpxData && (
-                  <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-xl uppercase tracking-widest">
-                    Route Tracked
-                  </span>
-               )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-10 border-t border-neutral-100 dark:border-neutral-900 pt-8 transition-colors">
-              <button 
-                onClick={() => handleLike(post._id)}
-                className={`flex items-center gap-3 font-black text-[11px] uppercase tracking-widest transition-all group ${post.likes?.some(id => (id._id || id) === user?._id) ? 'text-rose-500' : 'text-neutral-500 hover:text-black dark:hover:text-white'}`}
-              >
-                <Heart className={`h-6 w-6 transition-all ${post.likes?.some(id => (id._id || id) === user?._id) ? 'fill-rose-500 scale-110' : 'group-hover:scale-110'}`} />
-                {post.likes?.length || 0} Endorsements
-              </button>
-              
-              <button className="flex items-center gap-3 text-neutral-500 hover:text-black dark:hover:text-white font-black text-[11px] uppercase tracking-widest transition-all group">
-                <MessageCircle className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                {post.comments?.length || 0} Pings
-              </button>
-            </div>
-
-            {/* Comments Section */}
-            {post.comments && post.comments.length > 0 && (
-              <div className="mt-10 space-y-6 border-t border-neutral-100 dark:border-neutral-900 pt-10 transition-colors">
-                 {post.comments.filter(c => !c.parentId).map((c, i) => (
-                   <div key={i} className="space-y-4">
-                      <div className="flex gap-4 group/item">
-                         <div 
-                           onClick={() => openProfile(c.user)}
-                           className="h-8 w-8 rounded-lg border-2 border-black dark:border-white bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center text-[10px] font-black shrink-0 transition-colors cursor-pointer"
-                         >
-                           {c.name ? c.name.slice(0, 1) : 'U'}
-                         </div>
-                         <div className="flex-1">
-                           <div className="flex items-center gap-3 mb-1">
-                              <span onClick={() => openProfile(c.user)} className="text-[11px] font-black text-black dark:text-white uppercase transition-colors cursor-pointer">{c.name}</span>
-                              <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">{new Date(c.date).toLocaleDateString()}</span>
-                              <button 
-                                onClick={() => setReplyTo({ ...replyTo, [post._id]: c._id })}
-                                className="text-[9px] font-black text-neutral-400 hover:text-black dark:hover:text-white transition-colors ml-auto opacity-0 group-hover/item:opacity-100 uppercase tracking-widest"
-                              >
-                                Reply
-                              </button>
-                           </div>
-                           <p className="text-sm text-neutral-600 dark:text-neutral-400 font-bold transition-colors leading-relaxed uppercase tracking-tight">{c.comment}</p>
-                         </div>
-                      </div>
-                      
-                      {/* Sub-comments (Replies) */}
-                      {post.comments.filter(reply => reply.parentId === c._id).map((reply, ridx) => (
-                         <div key={ridx} className="flex gap-4 ml-12 opacity-80 border-l border-neutral-100 dark:border-neutral-900 pl-6">
-                            <CornerDownRight className="h-4 w-4 text-neutral-300 shrink-0 mt-2" />
-                            <div className="flex-1">
-                               <div className="flex items-center gap-3 mb-1">
-                                  <span onClick={() => openProfile(reply.user)} className="text-[10px] font-black text-black dark:text-white uppercase cursor-pointer">{reply.name}</span>
-                                  <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">{new Date(reply.date).toLocaleDateString()}</span>
-                               </div>
-                               <p className="text-xs text-neutral-500 dark:text-neutral-500 font-bold uppercase tracking-tight leading-relaxed">{reply.comment}</p>
-                            </div>
-                         </div>
-                      ))}
-                   </div>
-                 ))}
-              </div>
-            )}
-
-            {/* Post Comment Input */}
-            <div className="mt-10 flex flex-col gap-3">
-               {replyTo[post._id] && (
-                  <div className="flex items-center justify-between bg-neutral-100 dark:bg-neutral-900 px-4 py-2 rounded-xl text-[9px] font-black uppercase text-neutral-500 border border-neutral-200 dark:border-neutral-800 animate-in slide-in-from-bottom-2 transition-colors">
-                     <span>Replying to {post.comments.find(c => c._id === replyTo[post._id])?.name}'s Transmission...</span>
-                     <button onClick={() => setReplyTo({...replyTo, [post._id]: null})} className="hover:text-rose-500 transition-colors">Discard</button>
-                  </div>
-               )}
-               <div className="flex gap-4">
-                  <input 
-                    type="text"
-                    placeholder="TYPE SECURE MESSAGE..."
-                    className="flex-1 bg-neutral-50 dark:bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-800 rounded-2xl px-6 py-4 text-[11px] font-black tracking-[0.2em] uppercase text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all shadow-inner placeholder:text-neutral-600"
-                    value={commentText[post._id] || ''}
-                    onChange={e => setCommentText({...commentText, [post._id]: e.target.value})}
-                    onKeyDown={e => e.key === 'Enter' && handleComment(post._id)}
-                  />
-                  <button 
-                    onClick={() => handleComment(post._id)}
-                    className="text-[11px] font-black uppercase tracking-[0.3em] text-black dark:text-white hover:opacity-50 transition-all border-b-2 border-transparent hover:border-current px-2"
-                  >
-                    Transmit
-                  </button>
-               </div>
-            </div>
-
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: '#0f172a' }}>Trek Feed</h1>
+            <p style={{ margin: '4px 0 0', fontSize: 14, color: '#94a3b8' }}>Stories from the trail community</p>
           </div>
-        ))
+          <button onClick={() => user ? setCreateOpen(true) : toast.error('Please log in first')} className="btn btn-green">
+            + Share Trek
+          </button>
+        </div>
+
+        {/* Posts */}
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 400, borderRadius: 20 }} />)}
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '60px 24px' }}>
+            <p style={{ fontSize: 32, margin: '0 0 12px' }}>🏔️</p>
+            <h3 style={{ margin: '0 0 8px', color: '#0f172a', fontWeight: 700 }}>No treks yet</h3>
+            <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>Be the first to share your journey!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {posts.map(post => (
+              <PostCard key={post._id} post={post} onDelete={handleDelete} onLike={handleLike} onComment={handleComment} />
+            ))}
+          </div>
         )}
       </div>
 
-      <UserProfileModal 
-         userId={selectedProfileId}
-         isOpen={isProfileOpen}
-         onClose={() => setIsProfileOpen(false)}
-      />
+      <CreatePost isOpen={createOpen} onClose={() => setCreateOpen(false)} onPostCreated={p => setPosts(prev => [p, ...prev])} />
     </div>
   );
 }

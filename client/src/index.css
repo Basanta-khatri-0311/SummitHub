@@ -1,44 +1,186 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+/* ── Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  font-synthesize: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  --bg-primary: #ffffff;
-  --text-primary: #111111; /* Very dark grayish black */
-}
-
-html.dark {
-  --bg-primary: #0a0a0a; /* Almost pure black */
-  --text-primary: #f5f5f5; /* Offwhite */
+  --green: #16a34a;
+  --green-light: #22c55e;
+  --green-pale: #f0fdf4;
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-400: #94a3b8;
+  --slate-600: #475569;
+  --slate-900: #0f172a;
 }
 
 body {
   margin: 0;
-  display: flex;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  /* A smooth transition for purely black/white looks great */
-  transition: background-color 0.2s ease, color 0.2s ease;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--slate-50);
+  color: var(--slate-900);
 }
 
-#root {
+/* ── Cards ────────────────────────────────────────── */
+.card {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid var(--slate-200);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.09); transform: translateY(-1px); }
+
+/* ── Buttons ──────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.btn-green { background: var(--green); color: white; }
+.btn-green:hover { background: #15803d; transform: scale(1.02); }
+.btn-green:active { transform: scale(0.98); }
+
+.btn-outline { background: transparent; color: var(--green); border: 1.5px solid var(--green); }
+.btn-outline:hover { background: var(--green-pale); }
+
+.btn-ghost { background: transparent; color: var(--slate-600); border: 1.5px solid var(--slate-200); }
+.btn-ghost:hover { background: var(--slate-100); color: var(--slate-900); }
+
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+.btn-lg { padding: 14px 28px; font-size: 16px; border-radius: 12px; }
+.btn-full { width: 100%; }
+
+.btn-follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--green);
+  transition: all 0.2s;
+  background: var(--green-pale);
+  color: var(--green);
+}
+.btn-follow.following {
+  background: white;
+  color: var(--slate-600);
+  border-color: var(--slate-200);
+}
+.btn-follow:hover { opacity: 0.85; transform: scale(1.03); }
+.btn-follow:active { transform: scale(0.97); }
+
+/* ── Inputs ───────────────────────────────────────── */
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--slate-200);
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--slate-900);
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(22,163,74,0.1); }
+.input::placeholder { color: var(--slate-400); }
+
+textarea.input { resize: vertical; min-height: 90px; }
+select.input { appearance: none; cursor: pointer; }
+
+/* ── Nav ──────────────────────────────────────────── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--slate-200);
+}
+
+/* ── Badge ────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge-green { background: var(--green-pale); color: var(--green); }
+.badge-blue { background: #eff6ff; color: #2563eb; }
+.badge-orange { background: #fff7ed; color: #ea580c; }
+.badge-red { background: #fef2f2; color: #dc2626; }
+
+/* ── Skeleton loader ────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ── Map ──────────────────────────────────────────── */
+.leaflet-container { border-radius: 16px !important; }
+.leaflet-popup-content-wrapper {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
+  padding: 4px !important;
+}
+.leaflet-popup-tip-container { display: none; }
+
+/* ── Scrollbar ────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--slate-200); border-radius: 10px; }
+
+/* ── Modal backdrop ───────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(15,23,42,0.5);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+
+/* ── Divider ──────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--slate-100);
   width: 100%;
 }
 
-.map-tiles {
-  transition: filter 0.2s ease;
+/* ── Animations ───────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-html.dark .map-tiles {
-  filter: invert(1) hue-rotate(180deg) brightness(85%) contrast(110%);
+.fade-up { animation: fadeUp 0.4s ease forwards; }
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
+.scale-in { animation: scaleIn 0.25s ease forwards; }

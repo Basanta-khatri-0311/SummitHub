@@ -1,119 +1,147 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Target, Award, ArrowUp, Zap, Star } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Trophy, Medal, Star, Zap, Loader2 } from 'lucide-react';
+
+const RANK_STYLES = [
+  { bg: '#fefce8', border: '#fef08a', badge: '🥇', label: 'Gold' },
+  { bg: '#f8fafc', border: '#e2e8f0', badge: '🥈', label: 'Silver' },
+  { bg: '#fff7ed', border: '#fed7aa', badge: '🥉', label: 'Bronze' },
+];
+
+function getRankLabel(points) {
+  if (points >= 1000) return 'Expert Trekker';
+  if (points >= 500)  return 'Advanced';
+  if (points >= 200)  return 'Regular';
+  return 'Explorer';
+}
 
 export function Leaderboard() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLeaderboard();
+    fetch('http://localhost:5500/api/auth/leaderboard')
+      .then(r => r.json())
+      .then(d => { setUsers(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  const fetchLeaderboard = async () => {
-    try {
-      const res = await fetch('http://localhost:5500/api/auth/leaderboard');
-      const data = await res.json();
-      setUsers(data);
-    } catch (err) {
-      toast.error("Failed to sync ranking data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getBadgeIcon = (points) => {
-    if (points >= 500) return <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />;
-    if (points >= 200) return <Zap className="h-4 w-4 text-emerald-500 fill-emerald-500" />;
-    return <Award className="h-4 w-4 text-neutral-400" />;
-  };
-
-  const getRankStyle = (index) => {
-    if (index === 0) return "bg-black text-white dark:bg-white dark:text-black shadow-lg scale-105 border-transparent";
-    if (index === 1) return "border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50";
-    if (index === 2) return "border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30";
-    return "border-neutral-100 dark:border-neutral-900 hover:border-black dark:hover:border-white opacity-80";
-  };
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-16 w-full min-h-screen">
-      <div className="text-center mb-16 space-y-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 border border-neutral-200 dark:border-neutral-800 rounded-full text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">
-          <Trophy className="h-3 w-3" /> Season 01 Active
-        </div>
-        <h1 className="text-5xl md:text-6xl font-black text-black dark:text-white tracking-tighter uppercase">
-           Global Leaderboard
-        </h1>
-        <p className="text-neutral-500 font-bold uppercase tracking-[0.2em] text-xs">Ranking by Expedition Activity & Impact</p>
-      </div>
+    <div style={{ background: '#f8fafc', minHeight: '100vh', padding: '40px 16px 80px' }}>
+      <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
-      <div className="space-y-4">
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
+          <h1 style={{ margin: '0 0 10px', fontSize: 32, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px' }}>Leaderboard</h1>
+          <p style={{ margin: 0, fontSize: 15, color: '#64748b' }}>
+            Top trekkers ranked by community points
+          </p>
+        </div>
+
+        {/* Top 3 podium (desktop) */}
+        {!loading && users.length >= 3 && (
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 12, marginBottom: 32 }}>
+            {[users[1], users[0], users[2]].map((u, visualIdx) => {
+              const rank = visualIdx === 1 ? 1 : visualIdx === 0 ? 2 : 3;
+              const heights = [140, 180, 120];
+              const style = RANK_STYLES[rank - 1];
+              return (
+                <div key={u._id} style={{
+                  flex: 1, maxWidth: 180, textAlign: 'center',
+                  background: style.bg, border: `2px solid ${style.border}`,
+                  borderRadius: '20px 20px 0 0', padding: '20px 12px',
+                  height: heights[visualIdx], display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end'
+                }}>
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>{style.badge}</div>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 14, background: 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 800, color: '#0f172a', fontSize: 18, marginBottom: 8,
+                    border: '2px solid rgba(0,0,0,0.06)', overflow: 'hidden'
+                  }}>
+                    {u.avatar ? <img src={u.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : u.name?.charAt(0)}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>{u.name?.split(' ')[0]}</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: '#16a34a' }}>{u.points}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>pts</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Full list */}
         {loading ? (
-          <div className="text-center py-20 animate-pulse font-black text-[10px] uppercase tracking-widest text-neutral-400">Recalculating global ranks...</div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-20 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl">
-             <p className="text-neutral-500 uppercase font-black text-[10px] tracking-widest">No active operatives in current database.</p>
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#16a34a', margin: '0 auto' }} />
+            <p style={{ color: '#94a3b8', marginTop: 12, fontSize: 14 }}>Loading rankings…</p>
           </div>
         ) : (
-          users.map((user, index) => (
-            <div 
-              key={user._id} 
-              className={`flex items-center justify-between p-6 rounded-3xl border transition-all duration-300 ${getRankStyle(index)}`}
-            >
-              <div className="flex items-center gap-6">
-                <div className="w-10 text-center">
-                  {index < 3 ? (
-                    <div className="flex justify-center">
-                      <Medal className={`h-6 w-6 ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-neutral-400' : 'text-orange-500'}`} />
-                    </div>
-                  ) : (
-                    <span className="text-lg font-black">{index + 1}</span>
-                  )}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {users.map((u, i) => (
+              <div key={u._id} style={{
+                display: 'flex', alignItems: 'center', gap: 16, padding: '16px 24px',
+                borderBottom: i < users.length - 1 ? '1px solid #f8fafc' : 'none',
+                background: i < 3 ? RANK_STYLES[i].bg : 'white',
+                transition: 'background 0.15s'
+              }}>
+                {/* Rank number */}
+                <div style={{ width: 36, textAlign: 'center', flexShrink: 0 }}>
+                  {i < 3
+                    ? <span style={{ fontSize: 22 }}>{RANK_STYLES[i].badge}</span>
+                    : <span style={{ fontSize: 15, fontWeight: 700, color: '#94a3b8' }}>#{i + 1}</span>
+                  }
                 </div>
 
-                <div className="h-12 w-12 rounded-2xl border border-current flex items-center justify-center font-black text-xs shrink-0 overflow-hidden">
-                   {user.avatar ? (
-                     <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-                   ) : user.name.slice(0, 2).toUpperCase()}
+                {/* Avatar */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: '#f0fdf4',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 17, fontWeight: 700, color: '#16a34a', flexShrink: 0,
+                  overflow: 'hidden', border: '2px solid #dcfce7'
+                }}>
+                  {u.avatar ? <img src={u.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : u.name?.charAt(0).toUpperCase()}
                 </div>
 
-                <div>
-                  <h3 className="font-black text-lg tracking-tight uppercase flex items-center gap-2">
-                    {user.name}
-                    {getBadgeIcon(user.points)}
-                  </h3>
-                  <div className="flex gap-2 mt-1">
-                    {user.points >= 500 && (
-                      <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-500 uppercase tracking-widest border border-yellow-500/20">Elite Predator</span>
-                    )}
-                    {user.points >= 200 && user.points < 500 && (
-                      <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 uppercase tracking-widest border border-emerald-500/20">Veteran</span>
-                    )}
-                    <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-500 uppercase tracking-widest border border-current transition-colors">Operative</span>
-                  </div>
+                {/* Name & rank */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>{u.name}</div>
+                  <span className="badge badge-green" style={{ fontSize: 10 }}>{getRankLabel(u.points)}</span>
+                </div>
+
+                {/* Points */}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: '#16a34a' }}>{u.points.toLocaleString()}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>points</div>
                 </div>
               </div>
+            ))}
 
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-2 text-black dark:text-white transition-colors">
-                  <ArrowUp className="h-4 w-4 text-emerald-500" />
-                  <span className="text-2xl font-black tracking-tighter">{user.points}</span>
-                </div>
-                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Network Points</span>
+            {users.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+                <p style={{ color: '#94a3b8', fontSize: 15 }}>No rankings yet — start sharing treks to earn points!</p>
               </div>
-            </div>
-          ))
+            )}
+          </div>
         )}
-      </div>
 
-      <div className="mt-16 bg-neutral-100 dark:bg-neutral-900 rounded-3xl p-10 flex flex-col md:flex-row items-center justify-between gap-8 border border-neutral-200 dark:border-neutral-800 transition-colors">
-         <div className="text-center md:text-left">
-            <h4 className="text-xl font-black text-black dark:text-white uppercase tracking-tight mb-2">Want to climb?</h4>
-            <p className="text-sm text-neutral-500 font-medium max-w-sm uppercase tracking-wide leading-relaxed">Broadcast expedition logs, engage with fellow trekkers, and validate new routes to earn higher rank points.</p>
-         </div>
-         <button className="bg-black dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase hover:scale-105 transition-all w-full md:w-auto">
-            Review Guidelines
-         </button>
+        {/* How to earn points */}
+        <div className="card" style={{ marginTop: 24, padding: 24 }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: '#0f172a' }}>How to earn points</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { action: 'Share a trek', points: '+10 pts' },
+              { action: 'Get a like', points: '+2 pts' },
+              { action: 'Get a comment', points: '+3 pts' },
+              { action: 'Join a group trek', points: '+5 pts' },
+            ].map(r => (
+              <div key={r.action} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
+                <span style={{ color: '#475569' }}>• {r.action}</span>
+                <span style={{ fontWeight: 700, color: '#16a34a' }}>{r.points}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
